@@ -38,7 +38,7 @@ const Navigation = () => {
   }, [isMenuOpen]);
 
   const navItems = [
-    { text: "Home", href: "/DigitalForge/" }, // GH Pages
+    { text: "Home", href: "/DigitalForge/" },
     { text: "about", href: "/about" },
     { text: "services", href: "/services" },
     { text: "cases", href: "/cases" },
@@ -50,7 +50,7 @@ const Navigation = () => {
     text.split("").map((char, index) => (
       <span
         key={index}
-        className="inline-block char-animate"
+        className="inline-block char-base char-enter"
         style={{ animationDelay: `${index * 0.05}s` }}
       >
         {char === " " ? "\u00A0" : char}
@@ -59,6 +59,7 @@ const Navigation = () => {
 
   return (
     <>
+      {/* фиксированная навигация сверху */}
       <nav className="fixed top-0 left-0 w-full z-50 bg-background/90 backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-6 py-8 flex justify-between items-center">
           <button
@@ -83,26 +84,23 @@ const Navigation = () => {
         </div>
       </nav>
 
+      {/* overlay */}
       <div
-        className={`fixed inset-0 z-40 ${isMenuOpen ? "visible opacity-100" : "invisible opacity-0"} transition-opacity duration-300`}
+        className={`fixed inset-0 z-40 ${
+          isMenuOpen ? "visible opacity-100" : "invisible opacity-0"
+        } transition-opacity duration-300`}
         onTouchMove={(e) => isMenuOpen && e.preventDefault()}
-        style={{
-          minHeight: "100dvh",
-          overscrollBehavior: "contain",
-          WebkitOverflowScrolling: "auto",
-        }}
+        style={{ minHeight: "100dvh", overscrollBehavior: "contain" }}
       >
         <div
           className={`absolute inset-0 bg-background transition-transform duration-500 ${
             isMenuOpen ? "translate-y-0" : "translate-y-full"
           }`}
-          style={{ minHeight: "100dvh" }}
         />
 
         <div
           className="relative w-full h-full flex flex-col items-center"
           style={{
-            minHeight: "100dvh",
             paddingTop: "calc(env(safe-area-inset-top, 0px) + 96px)",
             paddingBottom: "env(safe-area-inset-bottom, 0px)",
           }}
@@ -110,13 +108,17 @@ const Navigation = () => {
           <div className="flex-1 w-full grid place-items-center">
             <div className="space-y-8 text-center translate-y-[-4vh] md:translate-y-0">
               {navItems.map((item, index) => (
-                <div key={index} className="overflow-hidden">
+                <div key={index} className="overflow-visible">
                   <a
                     href={item.href}
-                    className="interactive nav-hover block whitespace-nowrap text-[clamp(2.5rem,6vw,6rem)] font-black hover:text-depo-blue transition-colors duration-700 leading-none"
+                    className="interactive nav-hover block whitespace-nowrap 
+                               text-[clamp(2.5rem,6vw,6rem)] font-black 
+                               hover:text-depo-blue leading-[1.2]"
                     style={{
                       transform: isMenuOpen ? "translateY(0)" : "translateY(100%)",
-                      transition: `transform 0.8s cubic-bezier(0.4,0,0.2,1) ${index * 0.1 + 0.25}s`,
+                      transition: `transform 0.8s cubic-bezier(0.4,0,0.2,1) ${
+                        index * 0.1 + 0.25
+                      }s`,
                     }}
                     onClick={() => setIsMenuOpen(false)}
                   >
@@ -138,19 +140,29 @@ const Navigation = () => {
       </div>
 
       <style>{`
-        .char-animate {
+        /* базовый стиль буквы */
+        .char-base {
+          display: inline-block;
+          will-change: transform, opacity;
+          backface-visibility: hidden;
+        }
+
+        /* вход */
+        .char-enter {
           transform: translateY(12px);
-          opacity: 0.001;
+          opacity: 0;
           animation: charIn .55s cubic-bezier(0.22,1,0.36,1) forwards;
         }
-        @keyframes charIn { to { transform: translateY(0); opacity: 1; } }
-
-        .nav-hover .char-animate {
-          transition: transform .35s cubic-bezier(0.22,1,0.36,1);
-          will-change: transform;
+        @keyframes charIn {
+          to { transform: translateY(0); opacity: 1; }
         }
-        .nav-hover:hover .char-animate,
-        .nav-hover:focus-visible .char-animate {
+
+        /* hover */
+        .nav-hover .char-base {
+          transition: transform .35s cubic-bezier(0.22,1,0.36,1);
+        }
+        .nav-hover:hover .char-base,
+        .nav-hover:focus-visible .char-base {
           transform: translateY(-6px);
         }
       `}</style>
