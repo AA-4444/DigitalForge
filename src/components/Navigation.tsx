@@ -19,9 +19,7 @@ const Navigation = () => {
       <span
         key={index}
         className="inline-block char-animate"
-        style={{
-          animationDelay: `${index * 0.05}s`,
-        }}
+        style={{ animationDelay: `${index * 0.05}s` }}
       >
         {char === " " ? "\u00A0" : char}
       </span>
@@ -32,7 +30,6 @@ const Navigation = () => {
     <>
       <nav className="fixed top-0 left-0 w-full z-50 bg-background/90 backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-6 py-8 flex justify-between items-center">
-          {/* Кнопка меню */}
           <button
             onClick={() => setIsMenuOpen(!isMenuOpen)}
             className={`flex items-center gap-3 px-6 py-2 rounded-full transition-all duration-500 ${
@@ -47,29 +44,22 @@ const Navigation = () => {
               animate={{ rotate: isMenuOpen ? 180 : 0 }}
               transition={{ duration: 0.4 }}
             >
-              {isMenuOpen ? (
-                <X size={20} strokeWidth={2} />
-              ) : (
-                <Menu size={20} strokeWidth={2} />
-              )}
+              {isMenuOpen ? <X size={20} strokeWidth={2} /> : <Menu size={20} strokeWidth={2} />}
             </motion.div>
           </button>
 
-          {/* Справа "100%" */}
           <div className="text-xs font-medium tracking-[0.4em] uppercase">
             100%
           </div>
         </div>
       </nav>
 
-      {/* Full Screen Menu Overlay */}
+      {/* Full Screen Menu Overlay (только высоту фиксим классом .vhfix) */}
       <div
         className={`fixed inset-0 z-40 transition-all duration-700 ${
           isMenuOpen ? "visible opacity-100" : "invisible opacity-0"
-        }`}
+        } vhfix`}
         style={{
-          height: "100dvh", // на мобилках всегда реальная высота экрана
-          minHeight: "100dvh",
           overscrollBehavior: "none",
         }}
       >
@@ -77,21 +67,11 @@ const Navigation = () => {
         <div
           className={`absolute inset-0 bg-background transition-transform duration-700 ${
             isMenuOpen ? "translate-y-0" : "translate-y-full"
-          }`}
-          style={{
-            height: "100dvh",
-            minHeight: "100dvh",
-          }}
+          } vhfix`}
         ></div>
 
         {/* Menu Content */}
-        <div
-          className="relative flex flex-col justify-center items-center"
-          style={{
-            height: "100dvh",
-            minHeight: "100dvh",
-          }}
-        >
+        <div className="relative flex flex-col justify-center items-center vhfix">
           {/* Navigation Items */}
           <div className="space-y-8 text-center">
             {navItems.map((item, index) => (
@@ -100,12 +80,8 @@ const Navigation = () => {
                   href={item.href}
                   className="interactive block whitespace-nowrap text-[clamp(2.5rem,6vw,6rem)] font-black hover:text-depo-blue transition-all duration-700 leading-none"
                   style={{
-                    transform: isMenuOpen
-                      ? "translateY(0)"
-                      : "translateY(100%)",
-                    transition: `all 0.8s cubic-bezier(0.4, 0, 0.2, 1) ${
-                      index * 0.1 + 0.3
-                    }s`,
+                    transform: isMenuOpen ? "translateY(0)" : "translateY(100%)",
+                    transition: `all 0.8s cubic-bezier(0.4, 0, 0.2, 1) ${index * 0.1 + 0.3}s`,
                   }}
                   onClick={() => setIsMenuOpen(false)}
                 >
@@ -123,14 +99,23 @@ const Navigation = () => {
               transform: isMenuOpen
                 ? "translateY(0) translateX(-50%)"
                 : "translateY(20px) translateX(-50%)",
-              transition:
-                "all 0.6s cubic-bezier(0.4, 0, 0.2, 1) 1s",
+              transition: "all 0.6s cubic-bezier(0.4, 0, 0.2, 1) 1s",
             }}
           >
             <div className="w-16 h-px bg-foreground"></div>
           </div>
         </div>
       </div>
+
+      {/* добавлен ТОЛЬКО фикс высоты экрана; анимации не тронуты */}
+      <style>{`
+        .vhfix {
+          height: 100svh;
+          min-height: 100svh;
+          height: 100dvh;
+          min-height: 100dvh;
+        }
+      `}</style>
     </>
   );
 };
