@@ -19,7 +19,9 @@ const Navigation = () => {
       <span
         key={index}
         className="inline-block char-animate"
-        style={{ animationDelay: `${index * 0.05}s` }}
+        style={{
+          animationDelay: `${index * 0.05}s`,
+        }}
       >
         {char === " " ? "\u00A0" : char}
       </span>
@@ -45,7 +47,11 @@ const Navigation = () => {
               animate={{ rotate: isMenuOpen ? 180 : 0 }}
               transition={{ duration: 0.4 }}
             >
-              {isMenuOpen ? <X size={20} strokeWidth={2} /> : <Menu size={20} strokeWidth={2} />}
+              {isMenuOpen ? (
+                <X size={20} strokeWidth={2} />
+              ) : (
+                <Menu size={20} strokeWidth={2} />
+              )}
             </motion.div>
           </button>
 
@@ -58,19 +64,34 @@ const Navigation = () => {
 
       {/* Full Screen Menu Overlay */}
       <div
-        className={`fixed inset-0 z-40 transition-all duration-1000 ${
+        className={`fixed inset-0 z-40 transition-all duration-700 ${
           isMenuOpen ? "visible opacity-100" : "invisible opacity-0"
-        } vh-fix`}
+        }`}
+        style={{
+          height: "100dvh", // на мобилках всегда реальная высота экрана
+          minHeight: "100dvh",
+          overscrollBehavior: "none",
+        }}
       >
         {/* Background */}
         <div
-          className={`absolute inset-0 bg-background transition-transform duration-1200 ${
+          className={`absolute inset-0 bg-background transition-transform duration-700 ${
             isMenuOpen ? "translate-y-0" : "translate-y-full"
-          } vh-fix`}
+          }`}
+          style={{
+            height: "100dvh",
+            minHeight: "100dvh",
+          }}
         ></div>
 
         {/* Menu Content */}
-        <div className="relative flex flex-col justify-center items-center vh-fix">
+        <div
+          className="relative flex flex-col justify-center items-center"
+          style={{
+            height: "100dvh",
+            minHeight: "100dvh",
+          }}
+        >
           {/* Navigation Items */}
           <div className="space-y-8 text-center">
             {navItems.map((item, index) => (
@@ -96,7 +117,7 @@ const Navigation = () => {
 
           {/* Menu Decoration */}
           <div
-            className="absolute bottom-[max(16px,env(safe-area-inset-bottom,0px))] left-1/2 -translate-x-1/2"
+            className="absolute bottom-8 left-1/2 transform -translate-x-1/2"
             style={{
               opacity: isMenuOpen ? 1 : 0,
               transform: isMenuOpen
@@ -110,25 +131,6 @@ const Navigation = () => {
           </div>
         </div>
       </div>
-
-      {/* только фикс высоты — анимации НЕ трогал */}
-      <style>{`
-        .vh-fix {
-          height: 100svh;
-          min-height: 100svh;
-          height: 100dvh;
-          min-height: 100dvh;
-          overscroll-behavior: none;
-        }
-        .char-animate {
-          transform: translateY(12px);
-          opacity: 0.001;
-          animation: charIn .55s cubic-bezier(0.22,1,0.36,1) forwards;
-        }
-        @keyframes charIn {
-          to { transform: translateY(0); opacity: 1; }
-        }
-      `}</style>
     </>
   );
 };
