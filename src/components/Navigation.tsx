@@ -2,43 +2,41 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Menu, X } from "lucide-react";
 
+const lockScroll = (lock: boolean) => {
+  const html = document.documentElement;
+  const body = document.body;
+
+  if (lock) {
+    const y = window.scrollY || window.pageYOffset;
+    body.dataset.lockY = String(y);
+    // фиксируем документ
+    html.style.overflow = "hidden";
+    body.style.position = "fixed";
+    body.style.top = `-${y}px`;
+    body.style.left = "0";
+    body.style.right = "0";
+    body.style.width = "100%";
+    body.style.overscrollBehavior = "none";
+  } else {
+    const y = Number(body.dataset.lockY || 0);
+    html.style.overflow = "";
+    body.style.position = "";
+    body.style.top = "";
+    body.style.left = "";
+    body.style.right = "";
+    body.style.width = "";
+    body.style.overscrollBehavior = "";
+    delete body.dataset.lockY;
+    window.scrollTo(0, y);
+  }
+};
+
 const Navigation = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
-  // надёжный scroll-lock для iOS: фиксируем body на текущем scrollY
   useEffect(() => {
-    const body = document.body;
-    if (isMenuOpen) {
-      const scrollY = window.scrollY || window.pageYOffset;
-      body.style.position = "fixed";
-      body.style.top = `-${scrollY}px`;
-      body.style.left = "0";
-      body.style.right = "0";
-      body.style.width = "100%";
-      body.style.overscrollBehavior = "none";
-      body.setAttribute("data-lock", String(scrollY));
-    } else {
-      const lockY = Number(body.getAttribute("data-lock") || 0);
-      body.style.position = "";
-      body.style.top = "";
-      body.style.left = "";
-      body.style.right = "";
-      body.style.width = "";
-      body.style.overscrollBehavior = "";
-      body.removeAttribute("data-lock");
-      // вернуть скролл туда, где был
-      window.scrollTo(0, lockY);
-    }
-    return () => {
-      // на всякий случай чистим при размонтировании
-      body.style.position = "";
-      body.style.top = "";
-      body.style.left = "";
-      body.style.right = "";
-      body.style.width = "";
-      body.style.overscrollBehavior = "";
-      body.removeAttribute("data-lock");
-    };
+    lockScroll(isMenuOpen);
+    return () => lockScroll(false);
   }, [isMenuOpen]);
 
   const navItems = [
@@ -63,8 +61,8 @@ const Navigation = () => {
 
   return (
     <>
-      {/* NAV поверх оверлея (кнопка всегда видна) */}
-      <nav className="fixed top-0 left-0 w-full z-[70] bg-background/90 backdrop-blur-md">
+      {/* фиксированный top-nav (всегда поверх меню) */}
+      <nav className="fixed top-0 left-0 w-full z-[100] bg-background/90 backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-6 py-8 flex justify-between items-center">
           <button
             onClick={() => setIsMenuOpen((v) => !v)}
@@ -84,72 +82,61 @@ const Navigation = () => {
             </motion.div>
           </button>
 
-          <div className="text-xs font-medium tracking-[0.4em] uppercase">100%</div>
+          <div className="text-xs font-medium tracking-[0.4em] uppercase">
+            100%
+          </div>
         </div>
       </nav>
 
-      {/* OVERLAY: фиксированный, перекрывает всё, свой скролл, без прокрутки боди */}
+      {/* полноэкранный оверлей под навбаром (фон всегда плотный) */}
       <div
-        className={`fixed inset-0 z-[60] transition-opacity duration-500 ${
-          isMenuOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+        aria-hidden={!isMenuOpen}
+        className={`fixed inset-0 z-[90] ${
+          isMenuOpen ? "pointer-events-auto" : "pointer-events-none"
         }`}
-        // фон
-        style={{
-          background: "var(--background)",
-          // iOS: запрет «проталкивания» скролла
-          overscrollBehavior: "contain",
-          WebkitOverflowScrolling: "touch",
-          // safe-area отступы
-          paddingTop: "env(safe-area-inset-top)",
-          paddingBottom: "env(safe-area-inset-bottom)",
-        }}
       >
-        {/* Контейнер контента меню со своим скроллом */}
+        {/* затемняющий фон — без трансформаций, только плавная прозрачность */}
         <div
-          className={`h-full w-full flex flex-col items-center justify-center transition-transform duration-700 ${
-            isMenuOpen ? "translate-y-0" : "translate-y-full"
+          className={`absolute inset-0 bg-background/95 transition-opacity duration-300 ${
+            isMenuOpen ? "opacity-100" : "opacity-0"
           }`}
-          style={{ overflowY: "auto", touchAction: "none" }}
-        >
-          {/* дубль-кнопка внутри оверлея (справа сверху) */}
-          <button
-            onClick={() => setIsMenuOpen(false)}
-            className="absolute top-6 right-6 z-[65] flex items-center gap-3 px-5 py-2 rounded-full bg-neutral-800 text-white hover:bg-depo-blue transition-all duration-300"
-          >
-            <span className="uppercase text-[11px] tracking-[0.4em]">close</span>
-            <X size={18} strokeWidth={2} />
-          </button>
+          // iOS: не «проталкивать» скролл
+          style={{ overscrollBehavior: "contain" }}
+        />
 
-          {/* пункты меню */}
+        {/* контент меню (собственный скролл если пунктов много) */}
+        <div
+          className="relative h-full w-full flex flex-col items-center justify-center overflow-y-auto"
+        >
           <div className="space-y-8 text-center">
             {navItems.map((item, index) => (
-              <div key={index} className="overflow-hidden">
-                <a
-                  href={item.href}
-                  className="interactive block whitespace-nowrap text-[clamp(2.5rem,6vw,6rem)] font-black hover:text-depo-blue transition-all duration-700 leading-none"
-                  style={{
-                    transform: isMenuOpen ? "translateY(0)" : "translateY(100%)",
-                    transition: `all 0.8s cubic-bezier(0.4, 0, 0.2, 1) ${index * 0.1 + 0.3}s`,
-                  }}
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  {createSpacedText(item.text)}
-                </a>
-              </div>
+              <motion.a
+                key={item.text}
+                href={item.href}
+                onClick={() => setIsMenuOpen(false)}
+                className="interactive block whitespace-nowrap text-[clamp(2.5rem,6vw,6rem)] font-black hover:text-depo-blue transition-colors leading-none"
+                initial={false}
+                animate={
+                  isMenuOpen
+                    ? { opacity: 1, y: 0 }
+                    : { opacity: 0, y: 40 }
+                }
+                transition={{ duration: 0.5, ease: "easeOut", delay: isMenuOpen ? index * 0.06 + 0.15 : 0 }}
+              >
+                {createSpacedText(item.text)}
+              </motion.a>
             ))}
           </div>
 
           {/* декоративная линия снизу */}
-          <div
+          <motion.div
             className="mt-16"
-            style={{
-              opacity: isMenuOpen ? 1 : 0,
-              transform: isMenuOpen ? "translateY(0)" : "translateY(20px)",
-              transition: "all 0.6s cubic-bezier(0.4, 0, 0.2, 1) 1s",
-            }}
+            initial={false}
+            animate={isMenuOpen ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
+            transition={{ duration: 0.5, ease: "easeOut", delay: isMenuOpen ? 0.6 : 0 }}
           >
             <div className="w-16 h-px bg-foreground" />
-          </div>
+          </motion.div>
         </div>
       </div>
     </>
