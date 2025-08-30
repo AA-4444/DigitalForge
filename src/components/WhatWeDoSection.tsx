@@ -13,18 +13,68 @@ const useInView = (options?: IntersectionObserverInit) => {
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    const io = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setInView(true);
-          io.unobserve(entry.target);
+
+    let io: IntersectionObserver | null = null;
+    let rafId = 0;
+
+    const markInView = () => {
+      if (!inView) setInView(true);
+    };
+
+    const fallbackCheck = () => {
+      cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(() => {
+        if (!el) return;
+        const rect = el.getBoundingClientRect();
+        const vh = window.innerHeight || document.documentElement.clientHeight;
+        // считаем видимым, когда верх попал ближе чем на 80% высоты экрана
+        if (rect.top < vh * 0.8) markInView();
+      });
+    };
+
+    // Пытаемся через IO
+    try {
+      io = new IntersectionObserver(
+        ([entry]) => {
+          if (entry.isIntersecting) {
+            markInView();
+            if (io) io.unobserve(entry.target);
+          }
+        },
+        {
+          // Щедрый rootMargin помогает на iOS
+          root: null,
+          threshold: [0, 0.1, 0.25],
+          rootMargin: "20% 0px -10% 0px",
+          ...(options || {}),
         }
-      },
-      { threshold: 0.3, rootMargin: "0px 0px -10% 0px", ...(options || {}) }
-    );
-    io.observe(el);
-    return () => io.disconnect();
-  }, [options]);
+      );
+      io.observe(el);
+    } catch {
+      // если что-то пойдет не так — сразу fallback
+      fallbackCheck();
+      window.addEventListener("scroll", fallbackCheck, { passive: true });
+      window.addEventListener("resize", fallbackCheck);
+    }
+
+    // Дополнительно: если IO есть, но он «молчит», подстрахуем через таймер
+    const safetyTimer = window.setTimeout(() => {
+      if (!inView) {
+        fallbackCheck();
+        window.addEventListener("scroll", fallbackCheck, { passive: true });
+        window.addEventListener("resize", fallbackCheck);
+      }
+    }, 300);
+
+    return () => {
+      if (io && el) io.unobserve(el);
+      io?.disconnect();
+      cancelAnimationFrame(rafId);
+      window.clearTimeout(safetyTimer);
+      window.removeEventListener("scroll", fallbackCheck);
+      window.removeEventListener("resize", fallbackCheck);
+    };
+  }, [options, inView]);
 
   return { ref, inView };
 };
@@ -44,7 +94,7 @@ const Reveal = ({ children, delay = 0, className = "" }: RevealProps) => {
 
 const WhatWeDoSection = () => {
   return (
-    <section className="relative py-32 px-6 overflow-hidden">
+    <section className="relative py-32 px-6 overflow-x-hidden">
       <div className="absolute inset-0 opacity-5">
         <div className="absolute top-1/2 left-0 w-full transform -translate-y-1/2">
           <div
@@ -136,6 +186,8 @@ const WhatWeDoSection = () => {
           transition-duration: 800ms;
           transition-timing-function: cubic-bezier(0.25, 0.8, 0.25, 1);
           will-change: transform, opacity;
+          backface-visibility: hidden;
+          -webkit-font-smoothing: antialiased;
         }
         .reveal.reveal-in {
           opacity: 1;
