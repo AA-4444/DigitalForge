@@ -6,7 +6,22 @@ const Navigation = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const scrollYRef = useRef(0);
 
-  // ЛОК СКРОЛЛА (без изменения анимаций)
+  // Фиксим высоту 100vh на iOS: --vh = 1% от фактической высоты окна
+  useEffect(() => {
+    const setVh = () => {
+      const vh = window.innerHeight * 0.01;
+      document.documentElement.style.setProperty("--vh", `${vh}px`);
+    };
+    setVh();
+    window.addEventListener("resize", setVh);
+    window.addEventListener("orientationchange", setVh);
+    return () => {
+      window.removeEventListener("resize", setVh);
+      window.removeEventListener("orientationchange", setVh);
+    };
+  }, []);
+
+  // Лочим скролл страницы при открытом меню (не трогаем анимации)
   useEffect(() => {
     const body = document.body;
     if (isMenuOpen) {
@@ -48,8 +63,8 @@ const Navigation = () => {
     { text: "instagram", href: "#" },
   ];
 
-  const createSpacedText = (text: string) =>
-    text.split("").map((char, index) => (
+  const createSpacedText = (text: string) => {
+    return text.split("").map((char, index) => (
       <span
         key={index}
         className="inline-block char-animate"
@@ -58,6 +73,7 @@ const Navigation = () => {
         {char === " " ? "\u00A0" : char}
       </span>
     ));
+  };
 
   return (
     <>
@@ -77,7 +93,11 @@ const Navigation = () => {
               animate={{ rotate: isMenuOpen ? 180 : 0 }}
               transition={{ duration: 0.4 }}
             >
-              {isMenuOpen ? <X size={20} strokeWidth={2} /> : <Menu size={20} strokeWidth={2} />}
+              {isMenuOpen ? (
+                <X size={20} strokeWidth={2} />
+              ) : (
+                <Menu size={20} strokeWidth={2} />
+              )}
             </motion.div>
           </button>
 
@@ -87,23 +107,39 @@ const Navigation = () => {
         </div>
       </nav>
 
-      {/* Оверлей — только высота и блок скролла, анимации не трогаю */}
+      {/* Full Screen Menu Overlay */}
       <div
         className={`fixed inset-0 z-40 transition-all duration-700 ${
           isMenuOpen ? "visible opacity-100" : "invisible opacity-0"
-        } vhfix`}
-        style={{ overscrollBehavior: "none" }}
+        }`}
+        style={{
+          // вместо 100vh используем calc(var(--vh)*100), чтобы на iPhone закрывало НИЗ
+          height: "calc(var(--vh, 1vh) * 100)",
+          minHeight: "calc(var(--vh, 1vh) * 100)",
+          overscrollBehavior: "none",
+        }}
         onTouchMove={(e) => isMenuOpen && e.preventDefault()}
       >
-        {/* фон */}
+        {/* Background */}
         <div
           className={`absolute inset-0 bg-background transition-transform duration-700 ${
             isMenuOpen ? "translate-y-0" : "translate-y-full"
-          } vhfix`}
-        />
+          }`}
+          style={{
+            height: "calc(var(--vh, 1vh) * 100)",
+            minHeight: "calc(var(--vh, 1vh) * 100)",
+          }}
+        ></div>
 
-        {/* контент меню */}
-        <div className="relative flex flex-col justify-center items-center vhfix">
+        {/* Menu Content */}
+        <div
+          className="relative flex flex-col justify-center items-center"
+          style={{
+            height: "calc(var(--vh, 1vh) * 100)",
+            minHeight: "calc(var(--vh, 1vh) * 100)",
+          }}
+        >
+          {/* Navigation Items */}
           <div className="space-y-8 text-center">
             {navItems.map((item, index) => (
               <div key={index} className="overflow-hidden">
@@ -112,7 +148,9 @@ const Navigation = () => {
                   className="interactive block whitespace-nowrap text-[clamp(2.5rem,6vw,6rem)] font-black hover:text-depo-blue transition-all duration-700 leading-none"
                   style={{
                     transform: isMenuOpen ? "translateY(0)" : "translateY(100%)",
-                    transition: `all 0.8s cubic-bezier(0.4, 0, 0.2, 1) ${index * 0.1 + 0.3}s`,
+                    transition: `all 0.8s cubic-bezier(0.4, 0, 0.2, 1) ${
+                      index * 0.1 + 0.3
+                    }s`,
                   }}
                   onClick={() => setIsMenuOpen(false)}
                 >
@@ -122,7 +160,7 @@ const Navigation = () => {
             ))}
           </div>
 
-          {/* полоска снизу */}
+          {/* Menu Decoration */}
           <div
             className="absolute bottom-8 left-1/2 transform -translate-x-1/2"
             style={{
@@ -133,36 +171,10 @@ const Navigation = () => {
               transition: "all 0.6s cubic-bezier(0.4, 0, 0.2, 1) 1s",
             }}
           >
-            <div className="w-16 h-px bg-foreground" />
+            <div className="w-16 h-px bg-foreground"></div>
           </div>
-
-          {/* iOS shim: прячет возможную полоску контента под адресной строкой */}
-          <div className="ios-bottom-shim" />
         </div>
       </div>
-
-      {/* ВНИЗУ — только утилиты высоты и shim. Анимации не менял. */}
-      <style>{`
-        .vhfix{
-          height: 100svh; min-height: 100svh;
-          height: 100lvh; min-height: 100lvh;
-          height: 100dvh; min-height: 100dvh;
-        }
-        .ios-bottom-shim{
-          position: fixed;
-          left: 0; right: 0; bottom: 0;
-          height: max(16px, env(safe-area-inset-bottom, 0px));
-          background: var(--background);
-          pointer-events: none;
-        }
-        /* твои анимации букв не трогаю */
-        .char-animate{
-          transform: translateY(12px);
-          opacity: 0.001;
-          animation: charIn .55s cubic-bezier(0.22,1,0.36,1) forwards;
-        }
-        @keyframes charIn{ to{ transform: translateY(0); opacity: 1; } }
-      `}</style>
     </>
   );
 };
