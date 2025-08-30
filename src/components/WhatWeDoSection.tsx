@@ -6,7 +6,21 @@ type RevealProps = {
   children?: React.ReactNode;
 };
 
-/** Простой и надёжный скролл-хук: триггерит один раз, когда элемент попадает во вьюпорт */
+/** ищем ближайший скролл-родитель (а не всегда window) */
+function getScrollParent(node: HTMLElement | null): HTMLElement | Window {
+  let el: HTMLElement | null = node;
+  const regex = /(auto|scroll|overlay)/;
+  while (el && el !== document.body) {
+    const style = getComputedStyle(el);
+    const oy = style.overflowY;
+    const ox = style.overflowX;
+    if (regex.test(oy) || regex.test(ox)) return el;
+    el = el.parentElement;
+  }
+  return window;
+}
+
+/** максимально надёжный reveal: IO → scroll-fallback → лёгкий поллинг для iOS */
 const useRevealOnScroll = (offsetRatio = 0.85) => {
   const ref = useRef<HTMLDivElement | null>(null);
   const [inView, setInView] = useState(false);
@@ -15,7 +29,10 @@ const useRevealOnScroll = (offsetRatio = 0.85) => {
     const el = ref.current;
     if (!el) return;
 
+    const scroller = getScrollParent(el);
+    let io: IntersectionObserver | null = null;
     let ticking = false;
+    let pollId: number | null = null;
 
     const check = () => {
       if (!el || inView) return;
@@ -27,6 +44,7 @@ const useRevealOnScroll = (offsetRatio = 0.85) => {
     };
 
     const onScroll = () => {
+      if (inView) return;
       if (!ticking) {
         ticking = true;
         requestAnimationFrame(() => {
@@ -36,21 +54,57 @@ const useRevealOnScroll = (offsetRatio = 0.85) => {
       }
     };
 
-    // стартовая проверка (если блок уже в зоне видимости)
-    check();
-    window.addEventListener("scroll", onScroll, { passive: true });
+    // 1) Пытаемся через IO (самый дешёвый путь)
+    try {
+      io = new IntersectionObserver(
+        ([entry]) => {
+          if (entry.isIntersecting) {
+            setInView(true);
+            if (io) io.unobserve(entry.target);
+          }
+        },
+        {
+          root: scroller instanceof Window ? null : (scroller as HTMLElement),
+          threshold: [0, 0.1, 0.25],
+          rootMargin: "20% 0px -10% 0px",
+        }
+      );
+      io.observe(el);
+    } catch {
+      // ignore
+    }
+
+    // 2) Фоллбек: слушаем скролл на реальном скроллере (а не всегда window)
+    const target = scroller === window ? window : (scroller as HTMLElement);
+    target.addEventListener("scroll", onScroll, { passive: true });
     window.addEventListener("resize", onScroll);
+    window.addEventListener("orientationchange", onScroll);
+    document.addEventListener("visibilitychange", onScroll);
+
+    // 3) Лёгкий поллинг для iOS, если IO «молчит»
+    // (короткий интервал, сам отключится при setInView)
+    pollId = window.setInterval(() => {
+      if (!inView) check();
+    }, 250) as unknown as number;
+
+    // стартовая проверка (если уже во вьюпорте)
+    check();
+
     return () => {
-      window.removeEventListener("scroll", onScroll);
+      io?.disconnect();
+      target.removeEventListener("scroll", onScroll);
       window.removeEventListener("resize", onScroll);
+      window.removeEventListener("orientationchange", onScroll);
+      document.removeEventListener("visibilitychange", onScroll);
+      if (pollId) window.clearInterval(pollId);
     };
-  }, [inView, offsetRatio]);
+  }, [offsetRatio, inView]);
 
   return { ref, inView };
 };
 
 const Reveal = ({ children, delay = 0, className = "" }: RevealProps) => {
-  const { ref, inView } = useRevealOnScroll(0.85); // чем меньше, тем раньше триггер
+  const { ref, inView } = useRevealOnScroll(0.86);
   return (
     <div
       ref={ref}
@@ -65,7 +119,6 @@ const Reveal = ({ children, delay = 0, className = "" }: RevealProps) => {
 const WhatWeDoSection = () => {
   return (
     <section className="relative py-32 px-6 overflow-x-hidden">
-      {/* Background Animation */}
       <div className="absolute inset-0 opacity-5 pointer-events-none">
         <div className="absolute top-1/2 left-0 w-full -translate-y-1/2">
           <div
@@ -90,7 +143,6 @@ const WhatWeDoSection = () => {
       </div>
 
       <div className="relative max-w-7xl mx-auto">
-        {/* Section Header */}
         <div className="text-center mb-24">
           <Reveal delay={0.1}>
             <h2 className="text-[clamp(2rem,8vw,8rem)] font-black leading-[0.8] mb-12">
@@ -109,7 +161,6 @@ const WhatWeDoSection = () => {
           </Reveal>
         </div>
 
-        {/* Floating Numbers */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-16 mb-32">
           {[
             { number: "100%", label: "Passion", d: 0.2 },
@@ -132,7 +183,6 @@ const WhatWeDoSection = () => {
           ))}
         </div>
 
-        {/* Philosophy */}
         <div className="text-center">
           <Reveal delay={0.8}>
             <blockquote className="text-[clamp(1.2rem,3vw,2rem)] font-medium leading-relaxed max-w-4xl mx-auto italic">
