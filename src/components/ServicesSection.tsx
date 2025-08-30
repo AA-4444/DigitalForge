@@ -91,20 +91,23 @@ const ServicesSection = () => {
               key={service.title}
               {...reveal(0.2 + index * 0.12)}
               href={service.href}
-              className="interactive group block relative"
+              className="interactive group block relative h-full"
             >
-              <div className="relative p-12 bg-background/50 backdrop-blur-sm border border-border/20 hover:bg-background transition-all duration-700 group-hover:transform group-hover:scale-105">
-             <div className="absolute top-6 right-6 text-6xl font-black opacity-10 group-hover:opacity-20 transition-opacity duration-500 font-mono tabular-nums">
-  {String(index + 1).padStart(2, "0")}
-</div>
+              <div className="relative h-full flex flex-col p-12 bg-background/50 backdrop-blur-sm border border-border/20 hover:bg-background transition-all duration-700 group-hover:transform group-hover:scale-105">
+                <div className="absolute top-6 right-6 text-6xl font-black opacity-10 group-hover:opacity-20 transition-opacity duration-500 font-mono tabular-nums">
+                  {String(index + 1).padStart(2, "0")}
+                </div>
+
                 <div className="relative z-10">
                   <h3 className="text-3xl md:text-4xl font-black mb-6 group-hover:text-depo-blue transition-colors duration-500">
                     {service.title}
                   </h3>
+
                   <p className="text-muted-foreground leading-relaxed mb-8 text-sm font-medium tracking-[0.1em]">
                     {service.description}
                   </p>
-                  <div className="flex items-center text-xs font-medium tracking-[0.3em] uppercase">
+
+                  <div className="mt-auto flex items-center text-xs font-medium tracking-[0.3em] uppercase">
                     <span className="mr-4 group-hover:text-depo-blue transition-colors duration-500">
                       Learn More
                     </span>
@@ -123,6 +126,7 @@ const ServicesSection = () => {
                     </svg>
                   </div>
                 </div>
+
                 <div className="absolute inset-0 bg-depo-blue/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                 <div className="absolute top-0 left-0 w-0 h-0 border-t-2 border-l-2 border-depo-blue group-hover:w-8 group-hover:h-8 transition-all duration-500"></div>
               </div>
