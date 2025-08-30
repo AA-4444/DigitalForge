@@ -2,12 +2,11 @@ import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { Menu, X } from "lucide-react";
 
-const NAV_H = 72;
-
 const Navigation = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const scrollYRef = useRef(0);
 
+  // Лочим скролл страницы (особенно для iPhone)
   useEffect(() => {
     if (isMenuOpen) {
       scrollYRef.current = window.scrollY;
@@ -49,11 +48,11 @@ const Navigation = () => {
   ];
 
   const createSpacedText = (text: string) =>
-    text.split("").map((char, i) => (
+    text.split("").map((char, index) => (
       <span
-        key={i}
-        className="char"
-        style={{ transitionDelay: `${i * 0.04}s` }}
+        key={index}
+        className="inline-block char-animate"
+        style={{ animationDelay: `${index * 0.05}s` }}
       >
         {char === " " ? "\u00A0" : char}
       </span>
@@ -61,100 +60,107 @@ const Navigation = () => {
 
   return (
     <>
-      <nav className="fixed top-0 left-0 w-full z-[3000] bg-background/90 backdrop-blur-md">
-        <div className="max-w-7xl mx-auto px-6" style={{ height: NAV_H }}>
-          <div className="h-full flex justify-between items-center">
-            <button
-              onClick={() => setIsMenuOpen((v) => !v)}
-              className={`flex items-center gap-3 px-6 py-2 rounded-full transition-all duration-500 ${
-                isMenuOpen ? "bg-depo-blue text-white" : "bg-neutral-800 text-white"
-              } hover:scale-105 hover:bg-depo-blue`}
-            >
-              <span className="uppercase text-xs tracking-[0.4em]">
-                {isMenuOpen ? "close" : "menu"}
-              </span>
-              <motion.div initial={false} animate={{ rotate: isMenuOpen ? 180 : 0 }} transition={{ duration: 0.35 }}>
-                {isMenuOpen ? <X size={20} strokeWidth={2} /> : <Menu size={20} strokeWidth={2} />}
-              </motion.div>
-            </button>
+      {/* фиксированная навигация сверху */}
+      <nav className="fixed top-0 left-0 w-full z-50 bg-background/90 backdrop-blur-md">
+        <div className="max-w-7xl mx-auto px-6 py-8 flex justify-between items-center">
+          <button
+            onClick={() => setIsMenuOpen((v) => !v)}
+            className={`flex items-center gap-3 px-6 py-2 rounded-full transition-all duration-500 ${
+              isMenuOpen ? "bg-depo-blue text-white" : "bg-neutral-800 text-white"
+            } hover:scale-105 hover:bg-depo-blue`}
+          >
+            <span className="uppercase text-xs tracking-[0.4em]">
+              {isMenuOpen ? "close" : "menu"}
+            </span>
+            <motion.div initial={false} animate={{ rotate: isMenuOpen ? 180 : 0 }} transition={{ duration: 0.35 }}>
+              {isMenuOpen ? <X size={20} strokeWidth={2} /> : <Menu size={20} strokeWidth={2} />}
+            </motion.div>
+          </button>
 
-            <div className="text-xs font-medium tracking-[0.4em] uppercase">100%</div>
-          </div>
+          <div className="text-xs font-medium tracking-[0.4em] uppercase">100%</div>
         </div>
       </nav>
 
-      {/* overlay */}
+      {/* Оверлей меню. Ниже по z-index, чтобы кнопка оставалась сверху */}
       <div
-        className={`fixed inset-0 z-[2500] ${isMenuOpen ? "pointer-events-auto" : "pointer-events-none"}`}
+        className={`fixed inset-0 z-40 ${isMenuOpen ? "visible opacity-100" : "invisible opacity-0"} transition-opacity duration-300`}
+        // страховка от тач-скролла под оверлеем
         onTouchMove={(e) => isMenuOpen && e.preventDefault()}
+        style={{
+          // iOS высота
+          minHeight: "100dvh",
+          overscrollBehavior: "contain",
+          WebkitOverflowScrolling: "auto",
+        }}
       >
-        {/* backdrop */}
-        <motion.div
-          className="absolute inset-0 bg-background"
-          initial={false}
-          animate={{ opacity: isMenuOpen ? 1 : 0 }}
-          transition={{ duration: 0.25, ease: "easeOut" }}
+        {/* фон оверлея */}
+        <div
+          className={`absolute inset-0 bg-background transition-transform duration-500 ${
+            isMenuOpen ? "translate-y-0" : "translate-y-full"
+          }`}
           style={{ minHeight: "100dvh" }}
         />
 
-        {/* menu content */}
-        <motion.div
-          className="relative w-full"
-          initial={false}
-          animate={{ opacity: isMenuOpen ? 1 : 0, y: isMenuOpen ? 0 : 24 }}
-          transition={{ duration: 0.4, ease: "easeOut", delay: isMenuOpen ? 0.05 : 0 }}
+        {/* контент меню */}
+        <div
+          className="relative w-full h-full flex flex-col items-center"
           style={{
             minHeight: "100dvh",
-            paddingTop: `calc(env(safe-area-inset-top, 0px) + ${NAV_H}px)`,
+            paddingTop: "calc(env(safe-area-inset-top, 0px) + 96px)", // пространство под верхней панелью и кнопкой
             paddingBottom: "env(safe-area-inset-bottom, 0px)",
           }}
         >
-          <div className="max-w-7xl mx-auto px-6 h-full relative">
-            {/* центр + смещение вверх на мобилках */}
-            <div className="grid place-items-center h-full">
-              <div className="w-full">
-                <div className="mx-auto text-center space-y-8
-                                translate-y-[-6vh] md:translate-y-0">
-                  {navItems.map((item, index) => (
-                    <motion.a
-                      key={item.text}
-                      href={item.href}
-                      onClick={() => setIsMenuOpen(false)}
-                      className="nav-link interactive block whitespace-nowrap text-[clamp(2.5rem,6vw,6rem)] font-black leading-none"
-                      initial={false}
-                      animate={isMenuOpen ? { opacity: 1, y: 0 } : { opacity: 0, y: 24 }}
-                      transition={{ duration: 0.45, ease: "easeOut", delay: isMenuOpen ? index * 0.06 + 0.12 : 0 }}
-                    >
-                      {createSpacedText(item.text)}
-                    </motion.a>
-                  ))}
+          {/* список по центру (на мобилке чуть выше) */}
+          <div className="flex-1 w-full grid place-items-center">
+            <div className="space-y-8 text-center translate-y-[-4vh] md:translate-y-0">
+              {navItems.map((item, index) => (
+                <div key={index} className="overflow-hidden">
+                  <a
+                    href={item.href}
+                    className="interactive block whitespace-nowrap text-[clamp(2.5rem,6vw,6rem)] font-black hover:text-depo-blue transition-all duration-700 leading-none nav-hover"
+                    style={{
+                      transform: isMenuOpen ? "translateY(0)" : "translateY(100%)",
+                      transition: `transform 0.8s cubic-bezier(0.4,0,0.2,1) ${index * 0.1 + 0.25}s, color .35s`,
+                    }}
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    {createSpacedText(item.text)}
+                  </a>
                 </div>
-              </div>
+              ))}
             </div>
-
-            {/* декоративная полоска — внизу меню */}
-            <motion.div
-              className="absolute left-1/2 -translate-x-1/2 bottom-[max(16px,env(safe-area-inset-bottom,0px))] w-16 h-px bg-foreground"
-              initial={false}
-              animate={isMenuOpen ? { opacity: 1, y: 0 } : { opacity: 0, y: 12 }}
-              transition={{ duration: 0.45, ease: "easeOut", delay: isMenuOpen ? 0.5 : 0 }}
-            />
           </div>
-        </motion.div>
+
+          {/* полоска в самом низу меню */}
+          <div
+            className="w-16 h-px bg-foreground mb-[max(16px,env(safe-area-inset-bottom,0px))] transition-all duration-500"
+            style={{
+              opacity: isMenuOpen ? 1 : 0,
+              transform: isMenuOpen ? "translateY(0)" : "translateY(12px)",
+            }}
+          />
+        </div>
       </div>
 
       {/* локальные стили для анимации букв */}
       <style>{`
-        .nav-link { 
-          transition: color .35s ease;
+        /* стартовая "поочередная" подсадка букв при первом показе */
+        .char-animate {
+          transform: translateY(12px);
+          opacity: 0.001; /* чтобы не моргало */
+          animation: charIn .55s cubic-bezier(0.22,1,0.36,1) forwards;
         }
-        .nav-link .char {
-          display: inline-block;
+        @keyframes charIn {
+          to { transform: translateY(0); opacity: 1; }
+        }
+
+        /* hover-эффект как у тебя раньше */
+        .nav-hover .char-animate {
           transition: transform .35s cubic-bezier(0.22,1,0.36,1);
           will-change: transform;
         }
-        .nav-link:hover .char,
-        .nav-link:focus-visible .char {
+        .nav-hover:hover .char-animate,
+        .nav-hover:focus-visible .char-animate {
           transform: translateY(-6px);
         }
       `}</style>
