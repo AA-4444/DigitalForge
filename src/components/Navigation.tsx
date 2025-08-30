@@ -1,9 +1,43 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { Menu, X } from "lucide-react";
 
 const Navigation = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const scrollYRef = useRef(0);
+
+  // ЛОК СКРОЛЛА (без изменения анимаций)
+  useEffect(() => {
+    const body = document.body;
+    if (isMenuOpen) {
+      scrollYRef.current = window.scrollY || window.pageYOffset || 0;
+      body.style.position = "fixed";
+      body.style.top = `-${scrollYRef.current}px`;
+      body.style.left = "0";
+      body.style.right = "0";
+      body.style.width = "100%";
+      body.style.overflow = "hidden";
+      (body.style as any).touchAction = "none";
+    } else {
+      body.style.position = "";
+      body.style.top = "";
+      body.style.left = "";
+      body.style.right = "";
+      body.style.width = "";
+      body.style.overflow = "";
+      (body.style as any).touchAction = "";
+      window.scrollTo(0, scrollYRef.current || 0);
+    }
+    return () => {
+      body.style.position = "";
+      body.style.top = "";
+      body.style.left = "";
+      body.style.right = "";
+      body.style.width = "";
+      body.style.overflow = "";
+      (body.style as any).touchAction = "";
+    };
+  }, [isMenuOpen]);
 
   const navItems = [
     { text: "Home", href: "/" },
@@ -14,8 +48,8 @@ const Navigation = () => {
     { text: "instagram", href: "#" },
   ];
 
-  const createSpacedText = (text: string) => {
-    return text.split("").map((char, index) => (
+  const createSpacedText = (text: string) =>
+    text.split("").map((char, index) => (
       <span
         key={index}
         className="inline-block char-animate"
@@ -24,7 +58,6 @@ const Navigation = () => {
         {char === " " ? "\u00A0" : char}
       </span>
     ));
-  };
 
   return (
     <>
@@ -54,25 +87,23 @@ const Navigation = () => {
         </div>
       </nav>
 
-      {/* Full Screen Menu Overlay (только высоту фиксим классом .vhfix) */}
+      {/* Оверлей — только высота и блок скролла, анимации не трогаю */}
       <div
         className={`fixed inset-0 z-40 transition-all duration-700 ${
           isMenuOpen ? "visible opacity-100" : "invisible opacity-0"
         } vhfix`}
-        style={{
-          overscrollBehavior: "none",
-        }}
+        style={{ overscrollBehavior: "none" }}
+        onTouchMove={(e) => isMenuOpen && e.preventDefault()}
       >
-        {/* Background */}
+        {/* фон */}
         <div
           className={`absolute inset-0 bg-background transition-transform duration-700 ${
             isMenuOpen ? "translate-y-0" : "translate-y-full"
           } vhfix`}
-        ></div>
+        />
 
-        {/* Menu Content */}
+        {/* контент меню */}
         <div className="relative flex flex-col justify-center items-center vhfix">
-          {/* Navigation Items */}
           <div className="space-y-8 text-center">
             {navItems.map((item, index) => (
               <div key={index} className="overflow-hidden">
@@ -91,7 +122,7 @@ const Navigation = () => {
             ))}
           </div>
 
-          {/* Menu Decoration */}
+          {/* полоска снизу */}
           <div
             className="absolute bottom-8 left-1/2 transform -translate-x-1/2"
             style={{
@@ -102,19 +133,35 @@ const Navigation = () => {
               transition: "all 0.6s cubic-bezier(0.4, 0, 0.2, 1) 1s",
             }}
           >
-            <div className="w-16 h-px bg-foreground"></div>
+            <div className="w-16 h-px bg-foreground" />
           </div>
+
+          {/* iOS shim: прячет возможную полоску контента под адресной строкой */}
+          <div className="ios-bottom-shim" />
         </div>
       </div>
 
-      {/* добавлен ТОЛЬКО фикс высоты экрана; анимации не тронуты */}
+      {/* ВНИЗУ — только утилиты высоты и shim. Анимации не менял. */}
       <style>{`
-        .vhfix {
-          height: 100svh;
-          min-height: 100svh;
-          height: 100dvh;
-          min-height: 100dvh;
+        .vhfix{
+          height: 100svh; min-height: 100svh;
+          height: 100lvh; min-height: 100lvh;
+          height: 100dvh; min-height: 100dvh;
         }
+        .ios-bottom-shim{
+          position: fixed;
+          left: 0; right: 0; bottom: 0;
+          height: max(16px, env(safe-area-inset-bottom, 0px));
+          background: var(--background);
+          pointer-events: none;
+        }
+        /* твои анимации букв не трогаю */
+        .char-animate{
+          transform: translateY(12px);
+          opacity: 0.001;
+          animation: charIn .55s cubic-bezier(0.22,1,0.36,1) forwards;
+        }
+        @keyframes charIn{ to{ transform: translateY(0); opacity: 1; } }
       `}</style>
     </>
   );
