@@ -64,19 +64,34 @@ const Navigation = () => {
 
       {/* Full Screen Menu Overlay */}
       <div
-        className={`fixed inset-0 z-40 transition-all duration-1000 ${
+        className={`fixed inset-0 z-40 transition-all duration-700 ${
           isMenuOpen ? "visible opacity-100" : "invisible opacity-0"
         }`}
+        style={{
+          height: "100dvh", // на мобилках всегда реальная высота экрана
+          minHeight: "100dvh",
+          overscrollBehavior: "none",
+        }}
       >
         {/* Background */}
         <div
-          className={`absolute inset-0 bg-background transition-transform duration-1200 ${
+          className={`absolute inset-0 bg-background transition-transform duration-700 ${
             isMenuOpen ? "translate-y-0" : "translate-y-full"
           }`}
+          style={{
+            height: "100dvh",
+            minHeight: "100dvh",
+          }}
         ></div>
 
         {/* Menu Content */}
-        <div className="relative h-full flex flex-col justify-center items-center">
+        <div
+          className="relative flex flex-col justify-center items-center"
+          style={{
+            height: "100dvh",
+            minHeight: "100dvh",
+          }}
+        >
           {/* Navigation Items */}
           <div className="space-y-8 text-center">
             {navItems.map((item, index) => (
@@ -121,4 +136,3 @@ const Navigation = () => {
 };
 
 export default Navigation;
-
