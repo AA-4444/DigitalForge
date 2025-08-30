@@ -6,7 +6,6 @@ const Navigation = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const scrollYRef = useRef(0);
 
-  // Лочим скролл страницы (особенно для iPhone)
   useEffect(() => {
     if (isMenuOpen) {
       scrollYRef.current = window.scrollY;
@@ -60,7 +59,6 @@ const Navigation = () => {
 
   return (
     <>
-      {/* фиксированная навигация сверху */}
       <nav className="fixed top-0 left-0 w-full z-50 bg-background/90 backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-6 py-8 flex justify-between items-center">
           <button
@@ -85,11 +83,8 @@ const Navigation = () => {
         </div>
       </nav>
 
-      {/* overlay меню */}
       <div
-        className={`fixed inset-0 z-40 ${
-          isMenuOpen ? "visible opacity-100" : "invisible opacity-0"
-        } transition-opacity duration-300`}
+        className={`fixed inset-0 z-40 ${isMenuOpen ? "visible opacity-100" : "invisible opacity-0"} transition-opacity duration-300`}
         onTouchMove={(e) => isMenuOpen && e.preventDefault()}
         style={{
           minHeight: "100dvh",
@@ -97,7 +92,6 @@ const Navigation = () => {
           WebkitOverflowScrolling: "auto",
         }}
       >
-        {/* фон */}
         <div
           className={`absolute inset-0 bg-background transition-transform duration-500 ${
             isMenuOpen ? "translate-y-0" : "translate-y-full"
@@ -105,7 +99,6 @@ const Navigation = () => {
           style={{ minHeight: "100dvh" }}
         />
 
-        {/* контент */}
         <div
           className="relative w-full h-full flex flex-col items-center"
           style={{
@@ -120,15 +113,10 @@ const Navigation = () => {
                 <div key={index} className="overflow-hidden">
                   <a
                     href={item.href}
-                    className="interactive nav-hover block whitespace-nowrap 
-                               text-[clamp(2.5rem,6vw,6rem)] font-black 
-                               hover:text-depo-blue transition-colors duration-700 
-                               leading-[1.05] py-1 md:py-2"
+                    className="interactive nav-hover block whitespace-nowrap text-[clamp(2.5rem,6vw,6rem)] font-black hover:text-depo-blue transition-colors duration-700 leading-none"
                     style={{
                       transform: isMenuOpen ? "translateY(0)" : "translateY(100%)",
-                      transition: `transform 0.8s cubic-bezier(0.4,0,0.2,1) ${
-                        index * 0.1 + 0.25
-                      }s`,
+                      transition: `transform 0.8s cubic-bezier(0.4,0,0.2,1) ${index * 0.1 + 0.25}s`,
                     }}
                     onClick={() => setIsMenuOpen(false)}
                   >
@@ -139,7 +127,6 @@ const Navigation = () => {
             </div>
           </div>
 
-          {/* полоска */}
           <div
             className="w-16 h-px bg-foreground mb-[max(16px,env(safe-area-inset-bottom,0px))] transition-all duration-500"
             style={{
@@ -150,21 +137,13 @@ const Navigation = () => {
         </div>
       </div>
 
-      {/* стили для букв */}
       <style>{`
         .char-animate {
-          display: inline-block;
-          transform: translate3d(0, 12px, 0);
+          transform: translateY(12px);
           opacity: 0.001;
           animation: charIn .55s cubic-bezier(0.22,1,0.36,1) forwards;
-          will-change: transform, opacity;
-          backface-visibility: hidden;
-          -webkit-font-smoothing: antialiased;
-          transform-style: preserve-3d;
         }
-        @keyframes charIn {
-          to { transform: translate3d(0, 0, 0); opacity: 1; }
-        }
+        @keyframes charIn { to { transform: translateY(0); opacity: 1; } }
 
         .nav-hover .char-animate {
           transition: transform .35s cubic-bezier(0.22,1,0.36,1);
@@ -172,7 +151,7 @@ const Navigation = () => {
         }
         .nav-hover:hover .char-animate,
         .nav-hover:focus-visible .char-animate {
-          transform: translate3d(0, -6px, 0);
+          transform: translateY(-6px);
         }
       `}</style>
     </>
