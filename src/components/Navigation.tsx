@@ -6,7 +6,6 @@ const Navigation = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const scrollYRef = useRef(0);
 
-  // Лочим скролл страницы (особенно для iPhone)
   useEffect(() => {
     if (isMenuOpen) {
       scrollYRef.current = window.scrollY;
@@ -60,7 +59,6 @@ const Navigation = () => {
 
   return (
     <>
-      {/* фиксированная навигация сверху (всегда над оверлеем) */}
       <nav className="fixed top-0 left-0 w-full z-50 bg-background/90 backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-6 py-8 flex justify-between items-center">
           <button
@@ -85,7 +83,6 @@ const Navigation = () => {
         </div>
       </nav>
 
-      {/* Оверлей меню (на слой ниже кнопки) */}
       <div
         className={`fixed inset-0 z-40 ${isMenuOpen ? "visible opacity-100" : "invisible opacity-0"} transition-opacity duration-300`}
         onTouchMove={(e) => isMenuOpen && e.preventDefault()}
@@ -95,7 +92,6 @@ const Navigation = () => {
           WebkitOverflowScrolling: "auto",
         }}
       >
-        {/* фон */}
         <div
           className={`absolute inset-0 bg-background transition-transform duration-500 ${
             isMenuOpen ? "translate-y-0" : "translate-y-full"
@@ -103,7 +99,6 @@ const Navigation = () => {
           style={{ minHeight: "100dvh" }}
         />
 
-        {/* контент меню */}
         <div
           className="relative w-full h-full flex flex-col items-center"
           style={{
@@ -113,7 +108,6 @@ const Navigation = () => {
           }}
         >
           <div className="flex-1 w-full grid place-items-center">
-            {/* чуть выше центра на мобилке */}
             <div className="space-y-8 text-center translate-y-[-4vh] md:translate-y-0">
               {navItems.map((item, index) => (
                 <div key={index} className="overflow-hidden">
@@ -133,7 +127,6 @@ const Navigation = () => {
             </div>
           </div>
 
-          {/* полоска внизу меню */}
           <div
             className="w-16 h-px bg-foreground mb-[max(16px,env(safe-area-inset-bottom,0px))] transition-all duration-500"
             style={{
@@ -144,9 +137,7 @@ const Navigation = () => {
         </div>
       </div>
 
-      {/* локальные стили для букв */}
       <style>{`
-        /* поочередное появление букв */
         .char-animate {
           transform: translateY(12px);
           opacity: 0.001;
@@ -154,7 +145,6 @@ const Navigation = () => {
         }
         @keyframes charIn { to { transform: translateY(0); opacity: 1; } }
 
-        /* подпрыгивание букв при hover/focus — как раньше */
         .nav-hover .char-animate {
           transition: transform .35s cubic-bezier(0.22,1,0.36,1);
           will-change: transform;
