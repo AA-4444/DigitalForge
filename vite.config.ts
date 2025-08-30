@@ -3,7 +3,7 @@ import react from "@vitejs/plugin-react-swc";
 import path from "path";
 
 export default defineConfig({
-  base: "/DigitalForge/", // <-- важно для GitHub Pages
+  base: "/DigitalForge/", 
   server: { host: "::", port: 8080 },
   plugins: [react()],
   resolve: {
