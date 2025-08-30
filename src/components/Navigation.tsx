@@ -6,7 +6,6 @@ const Navigation = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const scrollYRef = useRef(0);
 
-  // Лочим скролл страницы (особенно для iPhone)
   useEffect(() => {
     if (isMenuOpen) {
       scrollYRef.current = window.scrollY;
@@ -39,7 +38,7 @@ const Navigation = () => {
   }, [isMenuOpen]);
 
   const navItems = [
-    { text: "Home", href: "/DigitalForge/" }, // GH Pages
+    { text: "Home", href: "/DigitalForge/" },
     { text: "about", href: "/about" },
     { text: "services", href: "/services" },
     { text: "cases", href: "/cases" },
@@ -60,7 +59,6 @@ const Navigation = () => {
 
   return (
     <>
-      {/* фиксированная навигация сверху (всегда над оверлеем) */}
       <nav className="fixed top-0 left-0 w-full z-50 bg-background/90 backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-6 py-8 flex justify-between items-center">
           <button
@@ -85,17 +83,11 @@ const Navigation = () => {
         </div>
       </nav>
 
-      {/* Оверлей меню (на слой ниже кнопки) */}
       <div
         className={`fixed inset-0 z-40 ${isMenuOpen ? "visible opacity-100" : "invisible opacity-0"} transition-opacity duration-300`}
         onTouchMove={(e) => isMenuOpen && e.preventDefault()}
-        style={{
-          minHeight: "100dvh",
-          overscrollBehavior: "contain",
-          WebkitOverflowScrolling: "auto",
-        }}
+        style={{ minHeight: "100dvh", overscrollBehavior: "contain", WebkitOverflowScrolling: "auto" }}
       >
-        {/* фон */}
         <div
           className={`absolute inset-0 bg-background transition-transform duration-500 ${
             isMenuOpen ? "translate-y-0" : "translate-y-full"
@@ -103,7 +95,6 @@ const Navigation = () => {
           style={{ minHeight: "100dvh" }}
         />
 
-        {/* контент меню */}
         <div
           className="relative w-full h-full flex flex-col items-center"
           style={{
@@ -113,16 +104,16 @@ const Navigation = () => {
           }}
         >
           <div className="flex-1 w-full grid place-items-center">
-            {/* чуть выше центра на мобилке */}
             <div className="space-y-8 text-center translate-y-[-4vh] md:translate-y-0">
               {navItems.map((item, index) => (
-                <div key={index} className="overflow-hidden">
+                <div key={index}>
                   <a
                     href={item.href}
-                    className="interactive nav-hover block whitespace-nowrap text-[clamp(2.5rem,6vw,6rem)] font-black hover:text-depo-blue transition-colors duration-700 leading-none"
+                    className="interactive nav-hover block whitespace-nowrap text-[clamp(2.5rem,6vw,6rem)] font-black transition-colors duration-700 leading-none"
                     style={{
+                      padding: "0.18em 0",                // чтобы буквам было куда прыгать
                       transform: isMenuOpen ? "translateY(0)" : "translateY(100%)",
-                      transition: `transform 0.8s cubic-bezier(0.4,0,0.2,1) ${index * 0.1 + 0.25}s`,
+                      transition: `transform 0.8s cubic-bezier(0.4,0,0.2,1) ${index * 0.1 + 0.25}s, color .35s`,
                     }}
                     onClick={() => setIsMenuOpen(false)}
                   >
@@ -133,20 +124,14 @@ const Navigation = () => {
             </div>
           </div>
 
-          {/* полоска внизу меню */}
           <div
             className="w-16 h-px bg-foreground mb-[max(16px,env(safe-area-inset-bottom,0px))] transition-all duration-500"
-            style={{
-              opacity: isMenuOpen ? 1 : 0,
-              transform: isMenuOpen ? "translateY(0)" : "translateY(12px)",
-            }}
+            style={{ opacity: isMenuOpen ? 1 : 0, transform: isMenuOpen ? "translateY(0)" : "translateY(12px)" }}
           />
         </div>
       </div>
 
-      {/* локальные стили для букв */}
       <style>{`
-        /* поочередное появление букв */
         .char-animate {
           transform: translateY(12px);
           opacity: 0.001;
@@ -154,14 +139,13 @@ const Navigation = () => {
         }
         @keyframes charIn { to { transform: translateY(0); opacity: 1; } }
 
-        /* подпрыгивание букв при hover/focus — как раньше */
         .nav-hover .char-animate {
           transition: transform .35s cubic-bezier(0.22,1,0.36,1);
           will-change: transform;
         }
         .nav-hover:hover .char-animate,
         .nav-hover:focus-visible .char-animate {
-          transform: translateY(-6px);
+          transform: translateY(-4px); /* было -6px — можно вернуть, теперь не режется */
         }
       `}</style>
     </>
