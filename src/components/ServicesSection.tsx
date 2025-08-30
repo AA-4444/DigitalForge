@@ -94,9 +94,9 @@ const ServicesSection = () => {
               className="interactive group block relative"
             >
               <div className="relative p-12 bg-background/50 backdrop-blur-sm border border-border/20 hover:bg-background transition-all duration-700 group-hover:transform group-hover:scale-105">
-                <div className="absolute top-6 right-6 text-6xl font-black opacity-10 group-hover:opacity-20 transition-opacity duration-500">
-                  {String(index + 1).padStart(2, "0")}
-                </div>
+             <div className="absolute top-6 right-6 text-6xl font-black opacity-10 group-hover:opacity-20 transition-opacity duration-500 font-mono tabular-nums">
+  {String(index + 1).padStart(2, "0")}
+</div>
                 <div className="relative z-10">
                   <h3 className="text-3xl md:text-4xl font-black mb-6 group-hover:text-depo-blue transition-colors duration-500">
                     {service.title}
