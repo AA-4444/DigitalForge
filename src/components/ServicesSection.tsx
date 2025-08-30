@@ -11,9 +11,9 @@ const ServicesSection = () => {
 
   const services = [
     {
-      title: "complete website",
+      title: "Complete website",
       description:
-        "Moodboard / Wireframing / concepts in animation / design / development",
+        "moodboard / wireframing / concepts in animation / design / development",
       href: "/services/website-creation",
     },
     {
@@ -27,7 +27,7 @@ const ServicesSection = () => {
       href: "/services/ux-design",
     },
     {
-      title: "web development",
+      title: "Web development",
       description: "development / webflow / e-commerce",
       href: "/services/webflow-development",
     },
