@@ -69,27 +69,22 @@ function buildClip(maskIn: string, percent: number) {
   return `inset(0 0 ${v} 0)`; // default bottom
 }
 
-/* ----------------------------- Scene (repeatable; mask optional; CSS pause optional) ----------------------------- */
+/* ----------------------------- Scene (repeatable reveal) ----------------------------- */
 function Scene({
   id,
   children,
   maskIn = "inset(0 0 100% 0)",
   maskShow = "inset(0 0 0% 0)",
   viewAmount = 0.25,
-  maskEnabled = true,   // ❗ включаем/выключаем clip-path контейнер
-  pauseCss = true,      // ❗ ставить ли на паузу CSS-анимации до раскрытия
 }: {
   id: string;
   children: ReactNode;
   maskIn?: string;
   maskShow?: string;
   viewAmount?: number;
-  maskEnabled?: boolean;
-  pauseCss?: boolean;
 }) {
   const sectionRef = useRef<HTMLElement | null>(null);
 
-  // мягче анимации на мобильных
   const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
     const mq = window.matchMedia("(max-width: 768px)");
@@ -125,7 +120,6 @@ function Scene({
   });
 
   useEffect(() => {
-    if (!maskEnabled) return; // если маска выключена — ничего не трогаем
     if (inView) {
       clipTarget.set(REVEAL_START);
       const id = requestAnimationFrame(() => clipTarget.set(0));
@@ -133,21 +127,9 @@ function Scene({
     } else {
       clipTarget.set(REVEAL_START);
     }
-  }, [inView, clipTarget, maskEnabled]);
+  }, [inView, clipTarget]);
 
   const clipPathMV = useTransform(clipPct, (p) => buildClip(maskIn, p as number));
-
-  // флаг для CSS-анимаций детей (пауза пока секция не раскрылась)
-  const revealOn = inView;
-
-  // ключ перерендера контента при раскрытии (вдруг понадобится для iOS) — по умолчанию не трогаем
-  const contentKey = undefined;
-
-  // В RAP: если maskEnabled=false — рендерим без clip-path/translateZ(0)
-  const Wrapper: any = maskEnabled ? motion.div : "div";
-  const wrapperStyle = maskEnabled
-    ? { clipPath: clipPathMV, willChange: "clip-path, transform", transform: "translateZ(0)" }
-    : undefined;
 
   return (
     <section
@@ -160,20 +142,17 @@ function Scene({
         backfaceVisibility: "hidden",
       }}
     >
-      <Wrapper
+      <motion.div
         className="w-full h-full"
-        data-reveal={revealOn ? "on" : "off"}
-        data-pause={pauseCss ? "on" : "off"}
-        style={wrapperStyle as any}
+        style={{ clipPath: clipPathMV, willChange: "clip-path, transform", transform: "translateZ(0)" }}
       >
         <motion.div
-          key={contentKey}
           className="w-full h-full"
           style={{ y, opacity, willChange: "transform, opacity", transform: "translateZ(0)" }}
         >
           {children}
         </motion.div>
-      </Wrapper>
+      </motion.div>
     </section>
   );
 }
@@ -209,6 +188,10 @@ function useAnchorIntercept() {
 /* ----------------------------- Page ----------------------------- */
 export default function Index() {
   const [booted, setBooted] = useState(false);
+  const [appShown, setAppShown] = useState(false);
+
+  // спец: двойной "kick" для перезапуска CSS keyframes в Hero на iOS
+  const [heroKick, setHeroKick] = useState(0);
 
   // блокируем скролл, пока лоадер виден
   useEffect(() => {
@@ -230,7 +213,25 @@ export default function Index() {
   useMobileVhFix();
   useAnchorIntercept();
 
-  // пока лоадер активен — монтируем только его
+  // После скрытия лоадера: плавно показываем приложение (CSS), и "пинаем" hero
+  useEffect(() => {
+    if (!booted) return;
+    // 1) плавный показ приложения (CSS-класс)
+    requestAnimationFrame(() => setAppShown(true));
+
+    // 2) двойной remount-кик + reflow — для старта Hero keyframes на iOS
+    requestAnimationFrame(() => {
+      setHeroKick(1); // первый remount
+      requestAnimationFrame(() => {
+        setHeroKick(2); // второй remount (надёжнее для WebKit)
+        // форс-рефлоу секции hero
+        const home = document.getElementById("home");
+        if (home) { void home.offsetHeight; } // читаем layout → repaint
+      });
+    });
+  }, [booted]);
+
+  // Рендерим только лоадер, пока он не завершился (никаких подложек)
   if (!booted) {
     return (
       <div className="fixed inset-0 z-[10000] bg-background">
@@ -239,51 +240,39 @@ export default function Index() {
     );
   }
 
-  // основной контент
   return (
-    <div className="min-h-screen relative overflow-x-hidden">
+    <div className={`min-h-screen relative overflow-x-hidden app-fade ${appShown ? "is-on" : ""}`}>
       <TransitionOverlay />
       <Navigation />
 
-      <motion.main
-        className="relative"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.35 }}
-      >
-        {/* 1) HERO — БЕЗ МАСКИ и БЕЗ CSS-паузы → iOS спокойно запускает keyframes */}
-        <Scene
-          id="home"
-          maskEnabled={false}
-          pauseCss={false}
-          viewAmount={0.25}
-        >
+      {/* Без фреймера на <main>, чтобы не мешать CSS-анимам внутри Hero */}
+      <main className="relative">
+        {/* HERO БЕЗ Scene + двойной key для перезапуска CSS @keyframes на iOS */}
+        <section id="home" key={`hero-${heroKick}`}>
           <HeroSection />
-        </Scene>
+        </section>
 
-        {/* 2) WhatWeDo — повторяемый вайп сверху */}
+        {/* Остальные секции — со сценами (повторяемый reveal) */}
         <Scene id="about" maskIn="inset(100% 0 0 0)" maskShow="inset(0 0 0 0)" viewAmount={0.22}>
           <WhatWeDoSection />
         </Scene>
 
-        {/* 3) Services — такой же вайп сверху */}
         <Scene id="services" maskIn="inset(100% 0 0 0)" maskShow="inset(0 0 0 0)" viewAmount={0.22}>
           <ServicesSection />
         </Scene>
 
-        {/* 4) Footer — вайп снизу */}
         <Scene id="contact" maskIn="inset(0 100% 0 0)" maskShow="inset(0 0 0 0)" viewAmount={0.25}>
           <Footer />
         </Scene>
-      </motion.main>
+      </main>
 
       <AwardsButton />
 
-      {/* Пауза CSS-анимаций только там, где data-pause="on" (Hero не затрагиваем) */}
       <style>{`
-        [data-reveal='off'][data-pause='on'] * {
-          animation-play-state: paused !important;
-        }
+        /* Плавный показ приложения — без влияния на вложенные keyframes */
+        .app-fade { opacity: 0; }
+        .app-fade.is-on { opacity: 1; transition: opacity .45s cubic-bezier(.4,0,.2,1); }
+
         @media (prefers-reduced-motion: reduce) {
           * { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
         }
