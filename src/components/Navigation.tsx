@@ -1,8 +1,6 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Menu, X } from "lucide-react";
-
-type Rect = { top: number; left: number; width: number; height: number };
 
 type InternalItem = {
   type: "section";
@@ -20,8 +18,6 @@ type NavItem = InternalItem | ExternalItem;
 
 const Navigation = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [origin, setOrigin] = useState<Rect | null>(null);
-  const [isAnimating, setIsAnimating] = useState(false);
   const btnRef = useRef<HTMLButtonElement | null>(null);
 
   const navItems: NavItem[] = [
@@ -32,73 +28,35 @@ const Navigation = () => {
     { type: "external", text: "instagram", href: "https://instagram.com" },
   ];
 
-  const measureButton = (): Rect | null => {
-    const el = btnRef.current;
-    if (!el) return null;
-    const r = el.getBoundingClientRect();
-    return { top: r.top, left: r.left, width: r.width, height: r.height };
-  };
+  const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
+  const targetW = isMobile ? Math.min(window.innerWidth - 96, 320) : 420;
+  const targetH = isMobile ? Math.min(window.innerHeight * 0.7, 420) : 380;
 
-  const beginAnimation = () => setIsAnimating(true);
-  const endAnimation = () => setIsAnimating(false);
+  const open = () => setIsMenuOpen(true);
+  const close = () => setIsMenuOpen(false);
+  const toggle = () => setIsMenuOpen((v) => !v);
 
-  const toggle = () => {
-    if (isAnimating) return; // защита от двойных тапов
-    if (!isMenuOpen) {
-      const pos = measureButton();
-      if (pos) setOrigin(pos);
-    }
-    beginAnimation();
-    setIsMenuOpen((v) => !v);
-  };
-
-  const close = () => {
-    if (isAnimating) return; // защита
-    beginAnimation();
-    setIsMenuOpen(false);
-  };
-
-  const handleExitComplete = () => {
-    setOrigin(null);
-    endAnimation();
-  };
-
+  // ESC для закрытия
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && close();
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
-  const targetW = isMobile ? Math.min(window.innerWidth - 96, 320) : 420;
-  const targetH = isMobile ? Math.min(window.innerHeight * 0.7, 420) : 380;
-
-  useLayoutEffect(() => {
-    if (isMenuOpen) {
-      const pos = measureButton();
-      if (pos) setOrigin(pos);
-    }
-  }, [isMenuOpen]);
-
+  // Плавный скролл к секции (после закрытия меню)
   const scrollToSection = (id: InternalItem["sectionId"]) => {
-    const el = document.getElementById(id);
-    if (el) {
-      close();
-      el.scrollIntoView({ behavior: "smooth", block: "start" });
-      try {
-        history.replaceState(null, "", `#${id}`);
-      } catch {}
-    }
+    close();
+    // даём кадр на закрытие, затем скроллим — iOS меньше мигает
+    requestAnimationFrame(() => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
+        try {
+          history.replaceState(null, "", `#${id}`);
+        } catch {}
+      }
+    });
   };
-
-  const fallbackFromButton = (): Rect => {
-    const r = btnRef.current?.getBoundingClientRect();
-    return r
-      ? { top: r.top, left: r.left, width: r.width, height: r.height }
-      : { top: 24, left: 24, width: 56, height: 48 };
-  };
-
-  const from = origin ?? fallbackFromButton();
 
   return (
     <>
@@ -107,99 +65,80 @@ const Navigation = () => {
         <div className="max-w-7xl mx-auto px-6 py-6 flex justify-end items-center" />
       </nav>
 
-      {/* фиксируем только кнопку — ниже панели */}
+      {/* фиксируем только кнопку — она под панелью по z-index */}
       <div className="fixed top-6 left-6 z-40">
         <button
           ref={btnRef}
-          onClick={toggle}
+          onPointerUp={toggle} // на iOS стабильнее, чем onClick
           aria-expanded={isMenuOpen}
           aria-controls="nav-panel"
-          // когда меню открыто — делаем фон прозрачным и вырубаем поинтеры, чтобы не было "двойного клика" и не светился круг
-          className={`flex items-center gap-3 px-6 py-3 rounded-full transition-all duration-500 ${
-            isMenuOpen ? "bg-transparent text-white pointer-events-none" : "bg-neutral-800 text-white"
-          } hover:scale-105 hover:bg-depo-blue`}
+          // когда меню открыто — кнопку полностью прячем и отключаем её события
+          className={`flex items-center gap-3 px-6 py-3 rounded-full transition-all duration-300 ${
+            isMenuOpen ? "opacity-0 pointer-events-none" : "bg-neutral-800 text-white hover:scale-105 hover:bg-depo-blue"
+          }`}
           style={{ WebkitTapHighlightColor: "transparent" }}
         >
           <span className="uppercase text-xs tracking-[0.4em] leading-none">
-            {isMenuOpen ? "close" : "menu"}
+            menu
           </span>
-
-          {!isMenuOpen && (
-            <motion.span
-              layoutId="menuIcon"
-              initial={false}
-              animate={{ rotate: 0 }}
-              className="inline-flex"
-            >
-              <Menu size={20} strokeWidth={2} />
-            </motion.span>
-          )}
+          <span className="inline-flex">
+            <Menu size={20} strokeWidth={2} />
+          </span>
         </button>
       </div>
 
-      {/* панель — поверх кнопки + iOS анти-артефакты */}
-      <AnimatePresence onExitComplete={handleExitComplete}>
+      {/* панель — всегда растёт из top-6/left-6; выше кнопки по z-index */}
+      <AnimatePresence>
         {isMenuOpen && (
           <motion.div
             key="nav-panel"
             id="nav-panel"
             role="dialog"
             aria-modal="true"
-            className="fixed z-50 [transform:translateZ(0)]"
+            className="fixed z-50"
             style={{
+              top: 24,  // top-6
+              left: 24, // left-6
               WebkitBackfaceVisibility: "hidden",
               backfaceVisibility: "hidden",
               WebkitTapHighlightColor: "transparent",
             }}
             initial={{
-              top: from.top,
-              left: from.left,
-              width: from.width,
-              height: from.height,
+              width: 56,
+              height: 48,
               borderRadius: 9999,
               opacity: 0.98,
             }}
             animate={{
-              top: from.top,
-              left: from.left,
               width: targetW,
               height: targetH,
               borderRadius: 24,
               opacity: 1,
             }}
             exit={{
-              top: from.top,
-              left: from.left,
-              width: from.width,
-              height: from.height,
+              width: 56,
+              height: 48,
               borderRadius: 9999,
               opacity: 0,
             }}
             transition={{ type: "spring", stiffness: 240, damping: 26 }}
-            onAnimationComplete={() => endAnimation()}
           >
             <div className="relative bg-depo-blue text-primary-foreground shadow-xl rounded-3xl overflow-hidden h-full w-full">
               {/* шапка */}
               <div className="px-5 py-4 border-b border-white/10">
-                {/* ровняем по центру, чтобы на iOS не было «выше/ниже» */}
                 <div className="flex justify-between items-center">
                   <span className="uppercase text-[11px] tracking-[0.4em] leading-none">
                     close
                   </span>
-                  <motion.button
+                  <button
                     type="button"
-                    onClick={close}
-                    layoutId="menuIcon"
-                    initial={{ rotate: 180, y: -1 }}  // аккуратная подстройка
-                    animate={{ rotate: 180, y: -1 }}
-                    transition={{ duration: 0.25 }}
+                    onPointerUp={close}
                     aria-label="Close menu"
                     className="inline-flex items-center justify-center rounded-full"
-                    // убираем фон на iOS, чтобы не было «кружка»
                     style={{ WebkitTapHighlightColor: "transparent" }}
                   >
                     <X size={18} strokeWidth={2} />
-                  </motion.button>
+                  </button>
                 </div>
               </div>
 
@@ -233,7 +172,7 @@ const Navigation = () => {
                       ) : (
                         <button
                           type="button"
-                          onClick={() => scrollToSection(item.sectionId)}
+                          onPointerUp={() => scrollToSection(item.sectionId)}
                           className="w-full text-left flex items-center justify-between py-4 group"
                           style={{ WebkitTapHighlightColor: "transparent" }}
                         >
