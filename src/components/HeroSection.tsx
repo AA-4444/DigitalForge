@@ -76,7 +76,7 @@ const HeroSection = () => {
         {/* MOBILE RIGHT SLIDE NAME PANEL (локальная для Hero) */}
         <div
           className="md:hidden absolute right-0 z-20 translate-x-6"  
-          style={{ top: "-70px" }}
+          style={{ top: "-52px" }}
         >
           <div
             className="bg-depo-blue text-primary-foreground rounded-l-3xl shadow-lg"
