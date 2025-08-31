@@ -99,7 +99,7 @@
 
   body {
     @apply bg-background text-foreground font-depo;
-    cursor: none;
+    cursor: auto;
   }
 }
 

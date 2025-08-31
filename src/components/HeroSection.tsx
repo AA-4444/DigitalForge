@@ -42,7 +42,7 @@ const HeroSection = () => {
       </div>
 
       {/* Scrolling project ticker */}
-      <div className="absolute top-28 left-0 w-full overflow-hidden opacity-20">
+      <div className="absolute top-10 left-0 w-full overflow-hidden opacity-20">
         <div
           className="flex items-center space-x-12 text-xs md:text-sm font-medium tracking-[0.3em] uppercase leading-[1.15] py-[2px] [will-change:transform]"
           style={{ animation: "scroll-horizontal 60s linear infinite", transform: "translateZ(0)" }}
@@ -76,7 +76,7 @@ const HeroSection = () => {
         {/* MOBILE RIGHT SLIDE NAME PANEL (локальная для Hero) */}
         <div
           className="md:hidden absolute right-0 z-20 translate-x-6"  
-          style={{ top: "-52px" }}
+          style={{ top: "-85px" }}
         >
           <div
             className="bg-depo-blue text-primary-foreground rounded-l-3xl shadow-lg"
