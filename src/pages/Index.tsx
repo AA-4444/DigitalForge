@@ -69,14 +69,15 @@ function buildClip(maskIn: string, percent: number) {
   return `inset(0 0 ${v} 0)`; // default bottom
 }
 
-/* ----------------------------- Scene (repeatable + CSS-anim pause until reveal) ----------------------------- */
+/* ----------------------------- Scene (repeatable + remount-on-reveal for iOS CSS) ----------------------------- */
 function Scene({
   id,
   children,
   maskIn = "inset(0 0 100% 0)",
   maskShow = "inset(0 0 0% 0)",
   viewAmount = 0.25,
-  autoReveal = false, // автостарт для hero
+  autoReveal = false,        // автостарт (для Hero)
+  remountOnReveal = false,   // перемаунтить контент при раскрытии (iOS CSS fix)
 }: {
   id: string;
   children: ReactNode;
@@ -84,9 +85,11 @@ function Scene({
   maskShow?: string;
   viewAmount?: number;
   autoReveal?: boolean;
+  remountOnReveal?: boolean;
 }) {
   const sectionRef = useRef<HTMLElement | null>(null);
 
+  // мягче анимации на мобильных
   const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
     const mq = window.matchMedia("(max-width: 768px)");
@@ -151,6 +154,9 @@ function Scene({
   // флаг для CSS-анимаций детей (пауза пока секция не раскрылась)
   const revealOn = inView || autoReveal;
 
+  // ключ для перемаунта контента при раскрытии (iOS: перезапуск CSS @keyframes)
+  const contentKey = remountOnReveal ? `${id}-${revealOn ? "on" : "off"}` : undefined;
+
   return (
     <section
       id={id}
@@ -168,6 +174,7 @@ function Scene({
         style={{ clipPath: clipPathMV, willChange: "clip-path, transform", transform: "translateZ(0)" }}
       >
         <motion.div
+          key={contentKey}
           className="w-full h-full"
           style={{ y, opacity, willChange: "transform, opacity", transform: "translateZ(0)" }}
         >
@@ -210,6 +217,7 @@ function useAnchorIntercept() {
 export default function Index() {
   const [booted, setBooted] = useState(false);
 
+  // блокируем скролл, пока лоадер виден
   useEffect(() => {
     if (!booted) {
       const prev = document.body.style.overflow;
@@ -218,7 +226,7 @@ export default function Index() {
     }
   }, [booted]);
 
-  // safety на случай, если LoadingScreen не вызовет onDone
+  // страховка, если LoadingScreen не вызовет onDone
   useEffect(() => {
     if (!booted) {
       const safety = setTimeout(() => setBooted(true), 4000);
@@ -229,6 +237,7 @@ export default function Index() {
   useMobileVhFix();
   useAnchorIntercept();
 
+  // Рендерим только лоадер, пока он не завершился (без подложек)
   if (!booted) {
     return (
       <div className="fixed inset-0 z-[10000] bg-background">
@@ -237,24 +246,27 @@ export default function Index() {
     );
   }
 
+  // После завершения — основной контент
   return (
     <div className="min-h-screen relative overflow-x-hidden">
       <TransitionOverlay />
       <Navigation />
 
+      {/* лёгкий fade-in контента при первом показе */}
       <motion.main
         className="relative"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.35 }}
       >
-        {/* 1. Hero — автостарт + CSS-анимы начнутся при reveal */}
+        {/* 1. Hero — автостарт + ремоунт при раскрытии (iOS CSS надёжно стартует) */}
         <Scene
           id="home"
           maskIn="inset(0 0 100% 0)"
           maskShow="inset(0 0 0 0)"
           viewAmount={0.25}
           autoReveal
+          remountOnReveal
         >
           <HeroSection />
         </Scene>
@@ -277,7 +289,7 @@ export default function Index() {
 
       <AwardsButton />
 
-      {/* ГЛОБАЛЬНО: пока секция не раскрыта — все CSS-анимации внутри на паузе */}
+      {/* Глобально: пока секция не раскрыта — CSS-анимации внутри на паузе */}
       <style>{`
         [data-reveal='off'] * {
           animation-play-state: paused !important;
