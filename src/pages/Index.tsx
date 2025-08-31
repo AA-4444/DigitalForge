@@ -69,23 +69,19 @@ function buildClip(maskIn: string, percent: number) {
   return `inset(0 0 ${v} 0)`; // default bottom
 }
 
-/* ----------------------------- Scene (repeatable; mask optional; CSS pause optional) ----------------------------- */
+/* ----------------------------- Scene (repeatable reveal) ----------------------------- */
 function Scene({
   id,
   children,
   maskIn = "inset(0 0 100% 0)",
   maskShow = "inset(0 0 0% 0)",
   viewAmount = 0.25,
-  maskEnabled = true,   // ❗ включаем/выключаем clip-path контейнер
-  pauseCss = true,      // ❗ ставить ли на паузу CSS-анимации до раскрытия
 }: {
   id: string;
   children: ReactNode;
   maskIn?: string;
   maskShow?: string;
   viewAmount?: number;
-  maskEnabled?: boolean;
-  pauseCss?: boolean;
 }) {
   const sectionRef = useRef<HTMLElement | null>(null);
 
@@ -125,7 +121,6 @@ function Scene({
   });
 
   useEffect(() => {
-    if (!maskEnabled) return; // если маска выключена — ничего не трогаем
     if (inView) {
       clipTarget.set(REVEAL_START);
       const id = requestAnimationFrame(() => clipTarget.set(0));
@@ -133,21 +128,9 @@ function Scene({
     } else {
       clipTarget.set(REVEAL_START);
     }
-  }, [inView, clipTarget, maskEnabled]);
+  }, [inView, clipTarget]);
 
   const clipPathMV = useTransform(clipPct, (p) => buildClip(maskIn, p as number));
-
-  // флаг для CSS-анимаций детей (пауза пока секция не раскрылась)
-  const revealOn = inView;
-
-  // ключ перерендера контента при раскрытии (вдруг понадобится для iOS) — по умолчанию не трогаем
-  const contentKey = undefined;
-
-  // В RAP: если maskEnabled=false — рендерим без clip-path/translateZ(0)
-  const Wrapper: any = maskEnabled ? motion.div : "div";
-  const wrapperStyle = maskEnabled
-    ? { clipPath: clipPathMV, willChange: "clip-path, transform", transform: "translateZ(0)" }
-    : undefined;
 
   return (
     <section
@@ -160,20 +143,17 @@ function Scene({
         backfaceVisibility: "hidden",
       }}
     >
-      <Wrapper
+      <motion.div
         className="w-full h-full"
-        data-reveal={revealOn ? "on" : "off"}
-        data-pause={pauseCss ? "on" : "off"}
-        style={wrapperStyle as any}
+        style={{ clipPath: clipPathMV, willChange: "clip-path, transform", transform: "translateZ(0)" }}
       >
         <motion.div
-          key={contentKey}
           className="w-full h-full"
           style={{ y, opacity, willChange: "transform, opacity", transform: "translateZ(0)" }}
         >
           {children}
         </motion.div>
-      </Wrapper>
+      </motion.div>
     </section>
   );
 }
@@ -215,11 +195,13 @@ export default function Index() {
     if (!booted) {
       const prev = document.body.style.overflow;
       document.body.style.overflow = "hidden";
-      return () => { document.body.style.overflow = prev; };
+      return () => {
+        document.body.style.overflow = prev;
+      };
     }
   }, [booted]);
 
-  // safety, если LoadingScreen не вызовет onDone
+  // страховка, если LoadingScreen не вызовет onDone
   useEffect(() => {
     if (!booted) {
       const safety = setTimeout(() => setBooted(true), 4000);
@@ -230,7 +212,7 @@ export default function Index() {
   useMobileVhFix();
   useAnchorIntercept();
 
-  // пока лоадер активен — монтируем только его
+  // Рендерим только лоадер, пока он не завершился (без подложек)
   if (!booted) {
     return (
       <div className="fixed inset-0 z-[10000] bg-background">
@@ -239,39 +221,32 @@ export default function Index() {
     );
   }
 
-  // основной контент
   return (
     <div className="min-h-screen relative overflow-x-hidden">
       <TransitionOverlay />
       <Navigation />
 
+      {/* Контент после лоадера — лёгкий fade-in */}
       <motion.main
         className="relative"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.35 }}
       >
-        {/* 1) HERO — БЕЗ МАСКИ и БЕЗ CSS-паузы → iOS спокойно запускает keyframes */}
-        <Scene
-          id="home"
-          maskEnabled={false}
-          pauseCss={false}
-          viewAmount={0.25}
-        >
+        {/* HERO БЕЗ Scene — чтобы iOS не ломал CSS keyframes */}
+        <section id="home">
           <HeroSection />
-        </Scene>
+        </section>
 
-        {/* 2) WhatWeDo — повторяемый вайп сверху */}
+        {/* Что ниже — остаётся с reveal-логикой */}
         <Scene id="about" maskIn="inset(100% 0 0 0)" maskShow="inset(0 0 0 0)" viewAmount={0.22}>
           <WhatWeDoSection />
         </Scene>
 
-        {/* 3) Services — такой же вайп сверху */}
         <Scene id="services" maskIn="inset(100% 0 0 0)" maskShow="inset(0 0 0 0)" viewAmount={0.22}>
           <ServicesSection />
         </Scene>
 
-        {/* 4) Footer — вайп снизу */}
         <Scene id="contact" maskIn="inset(0 100% 0 0)" maskShow="inset(0 0 0 0)" viewAmount={0.25}>
           <Footer />
         </Scene>
@@ -279,11 +254,8 @@ export default function Index() {
 
       <AwardsButton />
 
-      {/* Пауза CSS-анимаций только там, где data-pause="on" (Hero не затрагиваем) */}
+     
       <style>{`
-        [data-reveal='off'][data-pause='on'] * {
-          animation-play-state: paused !important;
-        }
         @media (prefers-reduced-motion: reduce) {
           * { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
         }
