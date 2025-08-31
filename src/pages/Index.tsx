@@ -69,7 +69,7 @@ function buildClip(maskIn: string, percent: number) {
   return `inset(0 0 ${v} 0)`; // default bottom
 }
 
-/* ----------------------------- Scene (repeatable + remount-on-reveal for iOS CSS) ----------------------------- */
+/* ----------------------------- Scene (repeatable + iOS kick) ----------------------------- */
 function Scene({
   id,
   children,
@@ -77,7 +77,7 @@ function Scene({
   maskShow = "inset(0 0 0% 0)",
   viewAmount = 0.25,
   autoReveal = false,        // автостарт (для Hero)
-  remountOnReveal = false,   // перемаунтить контент при раскрытии (iOS CSS fix)
+  remountOnReveal = false,   // перемаунт при раскрытии
 }: {
   id: string;
   children: ReactNode;
@@ -134,28 +134,38 @@ function Scene({
     }
   }, [inView, clipTarget]);
 
-  // автостарт для hero, если уже во вью на маунте (iOS)
+  // автостарт для Hero + iOS kick (двойной RAF, потом лёгкая задержка)
+  const [kick, setKick] = useState(0);
   useEffect(() => {
     if (!autoReveal) return;
+    const ua = typeof navigator !== "undefined" ? navigator.userAgent : "";
+    const isiOS = /iP(hone|od|ad)/.test(ua) || (/(Mac)/.test(ua) && "ontouchend" in document);
+    if (!isiOS) return;
+
+    // 1) сразу цель → 0 (как и было)
+    clipTarget.set(REVEAL_START);
     const r1 = requestAnimationFrame(() => {
-      clipTarget.set(REVEAL_START);
-      const r2 = requestAnimationFrame(() => clipTarget.set(0));
-      const t = setTimeout(() => clipTarget.set(0), 300);
-      return () => {
-        cancelAnimationFrame(r2);
-        clearTimeout(t);
-      };
+      clipTarget.set(0);
+      // 2) через кадр форс-ремоунт контента, чтобы CSS keyframes перезапустились
+      const r2 = requestAnimationFrame(() => {
+        setKick((k) => k + 1);
+        // 3) и ещё маленький таймаут — на случай медленного first paint
+        const t = setTimeout(() => setKick((k) => k + 1), 60);
+        return () => clearTimeout(t);
+      });
+      return () => cancelAnimationFrame(r2);
     });
     return () => cancelAnimationFrame(r1);
   }, [autoReveal, clipTarget]);
 
   const clipPathMV = useTransform(clipPct, (p) => buildClip(maskIn, p as number));
 
-  // флаг для CSS-анимаций детей (пауза пока секция не раскрылась)
+  // флаг для CSS-анимаций детей
   const revealOn = inView || autoReveal;
 
-  // ключ для перемаунта контента при раскрытии (iOS: перезапуск CSS @keyframes)
-  const contentKey = remountOnReveal ? `${id}-${revealOn ? "on" : "off"}` : undefined;
+  // ключи для перемаунта контента при раскрытии и для iOS kick
+  const contentKey =
+    (remountOnReveal ? `${id}-${revealOn ? "on" : "off"}` : `${id}`) + `-k${kick}`;
 
   return (
     <section
@@ -259,7 +269,7 @@ export default function Index() {
         animate={{ opacity: 1 }}
         transition={{ duration: 0.35 }}
       >
-        {/* 1. Hero — автостарт + ремоунт при раскрытии (iOS CSS надёжно стартует) */}
+        {/* 1. Hero — автостарт + ремоунт при раскрытии + iOS kick */}
         <Scene
           id="home"
           maskIn="inset(0 0 100% 0)"
@@ -289,10 +299,13 @@ export default function Index() {
 
       <AwardsButton />
 
-      {/* Глобально: пока секция не раскрыта — CSS-анимации внутри на паузе */}
+      {/* Управление CSS-анимациями детей через data-атрибут */}
       <style>{`
         [data-reveal='off'] * {
           animation-play-state: paused !important;
+        }
+        [data-reveal='on'] * {
+          animation-play-state: running !important;
         }
         @media (prefers-reduced-motion: reduce) {
           * { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
