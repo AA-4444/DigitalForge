@@ -4,7 +4,6 @@ import { Menu, X } from "lucide-react";
 
 type Rect = { top: number; left: number; width: number; height: number };
 
-
 type InternalItem = {
   type: "section";
   text: string;
@@ -19,7 +18,6 @@ type ExternalItem = {
 
 type NavItem = InternalItem | ExternalItem;
 
-
 const Navigation = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [origin, setOrigin] = useState<Rect | null>(null);
@@ -33,17 +31,11 @@ const Navigation = () => {
     { type: "external", text: "instagram", href: "https://instagram.com" },
   ];
 
-  
   const measureButton = (): Rect | null => {
     const el = btnRef.current;
     if (!el) return null;
     const r = el.getBoundingClientRect();
-    return {
-      top: r.top,
-      left: r.left,
-      width: r.width,
-      height: r.height,
-    };
+    return { top: r.top, left: r.left, width: r.width, height: r.height };
   };
 
   const toggle = () => {
@@ -54,14 +46,9 @@ const Navigation = () => {
     setIsMenuOpen((v) => !v);
   };
 
-  const close = () => {
-    
-    setIsMenuOpen(false);
-  };
-
+  const close = () => setIsMenuOpen(false);
   const handleExitComplete = () => setOrigin(null);
 
-  
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && close();
     window.addEventListener("keydown", onKey);
@@ -72,7 +59,6 @@ const Navigation = () => {
   const targetW = isMobile ? Math.min(window.innerWidth - 96, 320) : 420;
   const targetH = isMobile ? Math.min(window.innerHeight * 0.7, 420) : 380;
 
-  
   useLayoutEffect(() => {
     if (isMenuOpen) {
       const pos = measureButton();
@@ -80,7 +66,6 @@ const Navigation = () => {
     }
   }, [isMenuOpen]);
 
- 
   const scrollToSection = (id: InternalItem["sectionId"]) => {
     const el = document.getElementById(id);
     if (el) {
@@ -92,7 +77,6 @@ const Navigation = () => {
     }
   };
 
-  // Fallback из текущей кнопки, если origin ещё не готов
   const fallbackFromButton = (): Rect => {
     const r = btnRef.current?.getBoundingClientRect();
     return r
@@ -104,13 +88,13 @@ const Navigation = () => {
 
   return (
     <>
-   
+      {/* обычный хедер */}
       <nav className="w-full z-30 bg-background/90 backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-6 py-6 flex justify-end items-center" />
       </nav>
 
-     
-      <div className="fixed top-6 left-6 z-50">
+      {/* фиксируем только кнопку — опускаем её ниже панели */}
+      <div className="fixed top-6 left-6 z-40">
         <button
           ref={btnRef}
           onClick={toggle}
@@ -137,7 +121,7 @@ const Navigation = () => {
         </button>
       </div>
 
-     
+      {/* панель — поверх кнопки + iOS анти-артефакты */}
       <AnimatePresence onExitComplete={handleExitComplete}>
         {isMenuOpen && (
           <motion.div
@@ -145,7 +129,8 @@ const Navigation = () => {
             id="nav-panel"
             role="dialog"
             aria-modal="true"
-            className="fixed z-40"
+            className="fixed z-50 [transform:translateZ(0)]"
+            style={{ WebkitBackfaceVisibility: "hidden", backfaceVisibility: "hidden" }}
             initial={{
               top: from.top,
               left: from.left,
@@ -155,7 +140,7 @@ const Navigation = () => {
               opacity: 0.98,
             }}
             animate={{
-              top: from.top, 
+              top: from.top,
               left: from.left,
               width: targetW,
               height: targetH,
@@ -173,12 +158,10 @@ const Navigation = () => {
             transition={{ type: "spring", stiffness: 240, damping: 26 }}
           >
             <div className="relative bg-depo-blue text-primary-foreground shadow-xl rounded-3xl overflow-hidden h-full w-full">
-             
+              {/* шапка */}
               <div className="px-5 py-4 border-b border-white/10">
                 <div className="flex justify-between items-baseline">
                   <span className="uppercase text-[11px] tracking-[0.4em] leading-none">close</span>
-
-                
                   <motion.button
                     type="button"
                     onClick={close}
@@ -194,7 +177,7 @@ const Navigation = () => {
                 </div>
               </div>
 
-           
+              {/* список */}
               <nav className="h-[calc(100%-56px)] overflow-auto">
                 <ul className="px-5 pb-4">
                   {navItems.map((item, i) => (
