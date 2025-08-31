@@ -135,7 +135,7 @@ function Scene({
     <section
       id={id}
       ref={sectionRef as any}
-      className="relative overflow-hidden"
+      className="scene relative overflow-hidden"
       style={{
         minHeight: "max(100svh, calc(var(--vh, 1vh) * 100))",
         WebkitBackfaceVisibility: "hidden",
@@ -188,10 +188,6 @@ function useAnchorIntercept() {
 /* ----------------------------- Page ----------------------------- */
 export default function Index() {
   const [booted, setBooted] = useState(false);
-  const [appShown, setAppShown] = useState(false);
-
-  // спец: двойной "kick" для перезапуска CSS keyframes в Hero на iOS
-  const [heroKick, setHeroKick] = useState(0);
 
   // блокируем скролл, пока лоадер виден
   useEffect(() => {
@@ -202,7 +198,7 @@ export default function Index() {
     }
   }, [booted]);
 
-  // safety, если LoadingScreen не вызовет onDone
+  // страховка, если LoadingScreen не вызовет onDone
   useEffect(() => {
     if (!booted) {
       const safety = setTimeout(() => setBooted(true), 4000);
@@ -213,25 +209,7 @@ export default function Index() {
   useMobileVhFix();
   useAnchorIntercept();
 
-  // После скрытия лоадера: плавно показываем приложение (CSS), и "пинаем" hero
-  useEffect(() => {
-    if (!booted) return;
-    // 1) плавный показ приложения (CSS-класс)
-    requestAnimationFrame(() => setAppShown(true));
-
-    // 2) двойной remount-кик + reflow — для старта Hero keyframes на iOS
-    requestAnimationFrame(() => {
-      setHeroKick(1); // первый remount
-      requestAnimationFrame(() => {
-        setHeroKick(2); // второй remount (надёжнее для WebKit)
-        // форс-рефлоу секции hero
-        const home = document.getElementById("home");
-        if (home) { void home.offsetHeight; } // читаем layout → repaint
-      });
-    });
-  }, [booted]);
-
-  // Рендерим только лоадер, пока он не завершился (никаких подложек)
+  // Рендерим только лоадер, пока он не завершился (без подложек)
   if (!booted) {
     return (
       <div className="fixed inset-0 z-[10000] bg-background">
@@ -241,18 +219,23 @@ export default function Index() {
   }
 
   return (
-    <div className={`min-h-screen relative overflow-x-hidden app-fade ${appShown ? "is-on" : ""}`}>
+    <div className="min-h-screen relative overflow-x-hidden">
       <TransitionOverlay />
       <Navigation />
 
-      {/* Без фреймера на <main>, чтобы не мешать CSS-анимам внутри Hero */}
-      <main className="relative">
-        {/* HERO БЕЗ Scene + двойной key для перезапуска CSS @keyframes на iOS */}
-        <section id="home" key={`hero-${heroKick}`}>
+      {/* Контент после лоадера — лёгкий fade-in */}
+      <motion.main
+        className="relative"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.35 }}
+      >
+        {/* HERO БЕЗ Scene — чтобы iOS keyframes точно работали */}
+        <section id="home">
           <HeroSection />
         </section>
 
-        {/* Остальные секции — со сценами (повторяемый reveal) */}
+        {/* Остальные секции — с reveal-логикой */}
         <Scene id="about" maskIn="inset(100% 0 0 0)" maskShow="inset(0 0 0 0)" viewAmount={0.22}>
           <WhatWeDoSection />
         </Scene>
@@ -264,17 +247,19 @@ export default function Index() {
         <Scene id="contact" maskIn="inset(0 100% 0 0)" maskShow="inset(0 0 0 0)" viewAmount={0.25}>
           <Footer />
         </Scene>
-      </main>
+      </motion.main>
 
       <AwardsButton />
 
+      {/* ВАЖНО: больше НЕ глушим ВСЕ анимации при prefers-reduced-motion.
+         Глушим только внутри .scene (скролл-эффекты), а Hero оставляем живым. */}
       <style>{`
-        /* Плавный показ приложения — без влияния на вложенные keyframes */
-        .app-fade { opacity: 0; }
-        .app-fade.is-on { opacity: 1; transition: opacity .45s cubic-bezier(.4,0,.2,1); }
-
         @media (prefers-reduced-motion: reduce) {
-          * { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+          .scene * {
+            animation: none !important;
+            transition: none !important;
+          }
+          html:focus-within { scroll-behavior: auto !important; }
         }
       `}</style>
     </div>
