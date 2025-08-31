@@ -21,6 +21,7 @@ type NavItem = InternalItem | ExternalItem;
 const Navigation = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [origin, setOrigin] = useState<Rect | null>(null);
+  const [isAnimating, setIsAnimating] = useState(false);
   const btnRef = useRef<HTMLButtonElement | null>(null);
 
   const navItems: NavItem[] = [
@@ -38,16 +39,29 @@ const Navigation = () => {
     return { top: r.top, left: r.left, width: r.width, height: r.height };
   };
 
+  const beginAnimation = () => setIsAnimating(true);
+  const endAnimation = () => setIsAnimating(false);
+
   const toggle = () => {
+    if (isAnimating) return; // защита от двойных тапов
     if (!isMenuOpen) {
       const pos = measureButton();
       if (pos) setOrigin(pos);
     }
+    beginAnimation();
     setIsMenuOpen((v) => !v);
   };
 
-  const close = () => setIsMenuOpen(false);
-  const handleExitComplete = () => setOrigin(null);
+  const close = () => {
+    if (isAnimating) return; // защита
+    beginAnimation();
+    setIsMenuOpen(false);
+  };
+
+  const handleExitComplete = () => {
+    setOrigin(null);
+    endAnimation();
+  };
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && close();
@@ -93,18 +107,20 @@ const Navigation = () => {
         <div className="max-w-7xl mx-auto px-6 py-6 flex justify-end items-center" />
       </nav>
 
-      {/* фиксируем только кнопку — опускаем её ниже панели */}
+      {/* фиксируем только кнопку — ниже панели */}
       <div className="fixed top-6 left-6 z-40">
         <button
           ref={btnRef}
           onClick={toggle}
           aria-expanded={isMenuOpen}
           aria-controls="nav-panel"
+          // когда меню открыто — делаем фон прозрачным и вырубаем поинтеры, чтобы не было "двойного клика" и не светился круг
           className={`flex items-center gap-3 px-6 py-3 rounded-full transition-all duration-500 ${
-            isMenuOpen ? "bg-depo-blue text-white" : "bg-neutral-800 text-white"
+            isMenuOpen ? "bg-transparent text-white pointer-events-none" : "bg-neutral-800 text-white"
           } hover:scale-105 hover:bg-depo-blue`}
+          style={{ WebkitTapHighlightColor: "transparent" }}
         >
-          <span className="uppercase text-xs tracking-[0.4em]">
+          <span className="uppercase text-xs tracking-[0.4em] leading-none">
             {isMenuOpen ? "close" : "menu"}
           </span>
 
@@ -130,7 +146,11 @@ const Navigation = () => {
             role="dialog"
             aria-modal="true"
             className="fixed z-50 [transform:translateZ(0)]"
-            style={{ WebkitBackfaceVisibility: "hidden", backfaceVisibility: "hidden" }}
+            style={{
+              WebkitBackfaceVisibility: "hidden",
+              backfaceVisibility: "hidden",
+              WebkitTapHighlightColor: "transparent",
+            }}
             initial={{
               top: from.top,
               left: from.left,
@@ -156,21 +176,27 @@ const Navigation = () => {
               opacity: 0,
             }}
             transition={{ type: "spring", stiffness: 240, damping: 26 }}
+            onAnimationComplete={() => endAnimation()}
           >
             <div className="relative bg-depo-blue text-primary-foreground shadow-xl rounded-3xl overflow-hidden h-full w-full">
               {/* шапка */}
               <div className="px-5 py-4 border-b border-white/10">
-                <div className="flex justify-between items-baseline">
-                  <span className="uppercase text-[11px] tracking-[0.4em] leading-none">close</span>
+                {/* ровняем по центру, чтобы на iOS не было «выше/ниже» */}
+                <div className="flex justify-between items-center">
+                  <span className="uppercase text-[11px] tracking-[0.4em] leading-none">
+                    close
+                  </span>
                   <motion.button
                     type="button"
                     onClick={close}
                     layoutId="menuIcon"
-                    initial={{ rotate: 180, y: -4 }}
-                    animate={{ rotate: 180, y: -4 }}
+                    initial={{ rotate: 180, y: -1 }}  // аккуратная подстройка
+                    animate={{ rotate: 180, y: -1 }}
                     transition={{ duration: 0.25 }}
                     aria-label="Close menu"
-                    className="inline-flex items-center justify-center rounded-full hover:bg-white/10 transition-colors"
+                    className="inline-flex items-center justify-center rounded-full"
+                    // убираем фон на iOS, чтобы не было «кружка»
+                    style={{ WebkitTapHighlightColor: "transparent" }}
                   >
                     <X size={18} strokeWidth={2} />
                   </motion.button>
@@ -195,6 +221,7 @@ const Navigation = () => {
                           rel="noopener noreferrer"
                           onClick={close}
                           className="flex items-center justify-between py-4 group"
+                          style={{ WebkitTapHighlightColor: "transparent" }}
                         >
                           <span className="text-lg md:text-xl font-semibold tracking-wide">
                             {item.text}
@@ -208,6 +235,7 @@ const Navigation = () => {
                           type="button"
                           onClick={() => scrollToSection(item.sectionId)}
                           className="w-full text-left flex items-center justify-between py-4 group"
+                          style={{ WebkitTapHighlightColor: "transparent" }}
                         >
                           <span className="text-lg md:text-xl font-semibold tracking-wide">
                             {item.text}
