@@ -67,7 +67,14 @@ const WhatWeDoSection = () => {
           ].map((item) => (
             <motion.div key={item.label} {...reveal(item.d)} className="text-center group">
               <div className="relative inline-block">
-                <div className="text-[clamp(4rem,10vw,12rem)] font-black leading-none group-hover:text-depo-blue transition-colors duration-700">
+                {/* ⬇️ Больше на мобиле, аккуратнее на больших экранах */}
+                <div className="
+                  font-black leading-none group-hover:text-depo-blue transition-colors duration-700
+                  text-[clamp(5rem,28vw,8rem)]         /* mobile: крупно */
+                  md:text-[clamp(4rem,10vw,10rem)]     /* md+: адекватный рост */
+                  xl:text-[clamp(4rem,8vw,9rem)]       /* xl: чуть скромнее */
+                  2xl:text-[clamp(4rem,7vw,8rem)]      /* 2xl: не наезжает */
+                ">
                   {item.number}
                 </div>
                 <div className="absolute -top-4 -right-4 w-6 h-6 bg-depo-blue/20 rounded-full animate-pulse opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>

@@ -6,7 +6,6 @@ const Navigation = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const scrollYRef = useRef(0);
 
-  // Фиксим высоту 100vh на iOS: --vh = 1% от фактической высоты окна
   useEffect(() => {
     const setVh = () => {
       const vh = window.innerHeight * 0.01;
@@ -21,7 +20,6 @@ const Navigation = () => {
     };
   }, []);
 
-  // Лочим скролл страницы при открытом меню (не трогаем анимации)
   useEffect(() => {
     const body = document.body;
     if (isMenuOpen) {
@@ -56,10 +54,9 @@ const Navigation = () => {
 
   const navItems = [
     { text: "Home", href: "/" },
-    { text: "about", href: "/about" },
-    { text: "services", href: "/services" },
-    { text: "cases", href: "/cases" },
-    { text: "contacts", href: "/contact" },
+    { text: "About", href: "/about" },
+    { text: "Services", href: "/services" },
+    { text: "Contacts", href: "/contact" },
     { text: "instagram", href: "#" },
   ];
 
@@ -81,7 +78,7 @@ const Navigation = () => {
         <div className="max-w-7xl mx-auto px-6 py-8 flex justify-between items-center">
           <button
             onClick={() => setIsMenuOpen(!isMenuOpen)}
-            className={`flex items-center gap-3 px-6 py-2 rounded-full transition-all duration-500 ${
+            className={`flex items-center gap-3 px-6 py-3 rounded-full transition-all duration-500 ${
               isMenuOpen ? "bg-depo-blue text-white" : "bg-neutral-800 text-white"
             } hover:scale-105 hover:bg-depo-blue`}
           >
@@ -113,7 +110,6 @@ const Navigation = () => {
           isMenuOpen ? "visible opacity-100" : "invisible opacity-0"
         }`}
         style={{
-          // вместо 100vh используем calc(var(--vh)*100), чтобы на iPhone закрывало НИЗ
           height: "calc(var(--vh, 1vh) * 100)",
           minHeight: "calc(var(--vh, 1vh) * 100)",
           overscrollBehavior: "none",
@@ -142,10 +138,21 @@ const Navigation = () => {
           {/* Navigation Items */}
           <div className="space-y-8 text-center">
             {navItems.map((item, index) => (
-              <div key={index} className="overflow-hidden">
+              <div
+                key={index}
+                className={
+                  item.text === "instagram"
+                    ? "overflow-visible pb-[0.3em]"
+                    : "overflow-hidden"
+                }
+              >
                 <a
                   href={item.href}
-                  className="interactive block whitespace-nowrap text-[clamp(2.5rem,6vw,6rem)] font-black hover:text-depo-blue transition-all duration-700 leading-none"
+                  className={
+                    item.text === "instagram"
+                      ? "interactive block whitespace-nowrap text-[clamp(2.5rem,6vw,6rem)] font-black hover:text-depo-blue transition-all duration-700 leading-[1.04] will-change-transform"
+                      : "interactive block whitespace-nowrap text-[clamp(2.5rem,6vw,6rem)] font-black hover:text-depo-blue transition-all duration-700 leading-none"
+                  }
                   style={{
                     transform: isMenuOpen ? "translateY(0)" : "translateY(100%)",
                     transition: `all 0.8s cubic-bezier(0.4, 0, 0.2, 1) ${
